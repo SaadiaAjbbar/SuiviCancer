@@ -11,16 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hopitals', function (Blueprint $table) {
+        Schema::create('conseils', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
-            $table->string('adresse');
-            $table->string('telephone');
-            $table->string('email');
+            $table->date('date');
+            $table->text('description');
+            $table->foreignId('etat_general_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
- /**
+
+    /**
      * Reverse the migrations.
      */
     public function down(): void

@@ -11,16 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hopitals', function (Blueprint $table) {
-            $table->id();
-            $table->string('nom');
-            $table->string('adresse');
-            $table->string('telephone');
-            $table->string('email');
-            $table->timestamps();
+        Schema::create('symptome_consultation', function (Blueprint $table) {
+            $table->foreignId('consultation_id')->constrained();
+            $table->foreignId('symptome_id')->constrained();
         });
     }
- /**
+
+    /**
      * Reverse the migrations.
      */
     public function down(): void
