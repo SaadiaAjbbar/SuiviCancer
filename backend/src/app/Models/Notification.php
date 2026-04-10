@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
+    
     protected $fillable = ['date', 'contenu', 'type', 'user_id'];
 
     // La notification appartient à un utilisateur (Patient, Medecin, etc.)
