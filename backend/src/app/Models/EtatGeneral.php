@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EtatGeneral extends Model
 {
+    
     protected $fillable = ['description', 'consultation_id', 'reponse_questionnaire_id'];
 
     public function consultation()
