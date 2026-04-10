@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReponseQuestionnaire extends Model
 {
+    
     protected $fillable = ['reponse', 'patient_id'];
     public function patient()
     {
