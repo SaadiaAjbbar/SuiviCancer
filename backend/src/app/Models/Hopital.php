@@ -11,11 +11,6 @@ class Hopital extends Model
 
     protected $fillable = ['nom', 'adresse', 'telephone', 'email'];
 
-
-
-    /**
-     * Relation spécifique pour les AdminHopital
-     */
     public function admins()
     {
         return $this->hasOne(AdminHopital::class);
