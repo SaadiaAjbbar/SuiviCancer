@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Reponse extends Model
 {
+    
     protected $fillable = ['titre'];
 
 
