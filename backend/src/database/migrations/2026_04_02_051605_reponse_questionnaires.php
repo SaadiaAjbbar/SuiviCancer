@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+
         Schema::create('reponse_questionnaires', function (Blueprint $table) {
             $table->id();
             $table->string('reponse');
