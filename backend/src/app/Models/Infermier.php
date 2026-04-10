@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Infermier extends Model
 {
+    
     protected $fillable = ['user_id', 'hopital_id'];
 
     public function user() {
