@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
+
     'nom',
     'prenom',
     'email',
