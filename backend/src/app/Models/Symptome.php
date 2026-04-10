@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Symptome extends Model
 {
+    
     protected $fillable = ['nom', 'description', 'toxicite_id'];
 
     public function toxicite()
