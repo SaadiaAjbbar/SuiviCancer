@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
 {
+    
     protected $fillable = ['user_id', 'date_naissance', 'sexe', 'telephone', 'hopital_id', 'medecin_id'];
 
     public function user()
