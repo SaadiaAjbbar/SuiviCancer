@@ -12,11 +12,20 @@ class QuestionController extends Controller
     // 1. Lister les questions créées par ce médecin
     public function index()
     {
-
         $user = Auth::user();
+
         $medecin = $user->medecin;
 
         $questions = Question::where('medecin_id', $medecin->id)->get();
+        return response()->json($questions);
+    }
+
+    //hena function li ket2afichi lina les questions lpatient
+    public function afficherQuestionsPatient()
+    {
+        $user = Auth::user();
+        $patient = $user->patient;
+        $questions = Question::where('medecin_id', $patient->medecin_id)->get();
         return response()->json($questions);
     }
 
@@ -27,13 +36,12 @@ class QuestionController extends Controller
             'titre' => 'required|string|max:255',
         ]);
 
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
-
 
         $question = Question::create([
             'titre' => $request->titre,
-            'medecin_id' => $medecin->id
+            'medecin_id' => $medecin->id,
         ]);
 
         return response()->json(['message' => 'Question ajoutée au questionnaire', 'data' => $question], 201);
@@ -42,7 +50,7 @@ class QuestionController extends Controller
     // 3. Modifier une question
     public function update(Request $request, $id)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
 
         $question = Question::where('id', $id)->where('medecin_id', $medecin->id)->firstOrFail();
@@ -56,7 +64,7 @@ class QuestionController extends Controller
     // 4. Supprimer une question
     public function destroy($id)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
 
         $question = Question::where('id', $id)->where('medecin_id', $medecin->id)->firstOrFail();

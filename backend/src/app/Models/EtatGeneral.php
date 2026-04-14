@@ -6,15 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class EtatGeneral extends Model
 {
-    protected $fillable = ['description', 'consultation_id', 'reponse_questionnaire_id'];
+    protected $fillable = ['description', 'consultation_id', 'reponse_questionnaire_id', 'reponses_id'];
 
     public function consultation()
     {
         return $this->belongsTo(Consultation::class);
     }
-    public function reponseQuestionnaire()
+
+
+    public function Reponse()
     {
-        return $this->belongsTo(ReponseQuestionnaire::class);
+        return $this->belongsTo(Reponse::class);
     }
 
     // Décisions optionnelles

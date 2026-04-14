@@ -15,20 +15,18 @@ class EtatGeneralController extends Controller
     {
         $request->validate([
             'description' => 'required|string',
-            'consultation_id' => 'required|exists:consultations,id',
+            'consultation_id' => 'nullable|exists:consultations,id',
+            'reponses_id' => 'nullable|exists:reponses,id',
         ]);
         $user = Auth::user();
         $medecin = $user->medecin;
 
 
-        // Vérification: Wach had l-consultation dyal had l-medecin?
-        $consultation = Consultation::where('id', $request->consultation_id)
-                                    ->where('medecin_id', $medecin->id)
-                                    ->firstOrFail();
 
         $etat = EtatGeneral::create([
             'description' => $request->description,
             'consultation_id' => $request->consultation_id,
+            'reponses_id' => $request->reponses_id,
         ]);
 
         return response()->json(['message' => 'État général enregistré', 'data' => $etat], 201);
@@ -37,13 +35,10 @@ class EtatGeneralController extends Controller
     // 2. Afficher l'état général d'une consultation précise
     public function showByConsultation($consultation_id)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
 
-
-        $consultation = Consultation::where('id', $consultation_id)
-                                    ->where('medecin_id', $medecin->id)
-                                    ->firstOrFail();
+        $consultation = Consultation::where('id', $consultation_id)->where('medecin_id', $medecin->id)->firstOrFail();
 
         $etat = EtatGeneral::where('consultation_id', $consultation_id)->first();
 
@@ -57,13 +52,10 @@ class EtatGeneralController extends Controller
     // 3. Modifier l'état général
     public function update(Request $request, $id)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
 
-
-        $etat = EtatGeneral::whereHas('consultation', function($query) use ($medecin) {
-                    $query->where('medecin_id', $medecin->id);
-                })->findOrFail($id);
+        $etat = EtatGeneral::where('medecin_id', $medecin->id)->findOrFail($id);
 
         $request->validate(['description' => 'required|string']);
         $etat->update($request->only('description'));
@@ -74,12 +66,12 @@ class EtatGeneralController extends Controller
     // 4. Supprimer
     public function destroy($id)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $medecin = $user->medecin;
 
-        $etat = EtatGeneral::whereHas('consultation', function($query) use ($medecin) {
-                    $query->where('medecin_id', $medecin->id);
-                })->findOrFail($id);
+        $etat = EtatGeneral::whereHas('consultation', function ($query) use ($medecin) {
+            $query->where('medecin_id', $medecin->id);
+        })->findOrFail($id);
 
         $etat->delete();
         return response()->json(['message' => 'État général supprimé']);

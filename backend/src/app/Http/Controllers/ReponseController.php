@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Question;
+use App\Models\Reponse;
+use App\Models\reponse_questionnaires;
 use App\Models\ReponseQuestionnaire;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +19,7 @@ class ReponseController extends Controller
         $patient = Auth::user()->patient;
 
         // Njbdou les questions dyal l-medecin lli m-affecter lih had l-patient
-        
+
         $questions = Question::where('medecin_id', $patient->medecin_id)->get();
 
         return response()->json($questions);
@@ -31,21 +33,38 @@ class ReponseController extends Controller
             'responses.*.question_id' => 'required|exists:questions,id',
             'responses.*.reponse' => 'required|string',
         ]);
-
-        $patient = Auth::user()->patient;
         $savedResponses = [];
+        $patient = Auth::user()->patient;
+
+        $reponse = Reponse::create([
+            'patient_id' => $patient->id,
+        ]);
+
 
         foreach ($request->responses as $respData) {
-            $savedResponses[] = ReponseQuestionnaire::create([
-                'patient_id' => $patient->id,
-                'question_id' => $respData['question_id'],
+            $savedResponses =  reponse_questionnaires::create([
+                'reponses_id' => $reponse->id,
+                'questions_id' => $respData['question_id'],
                 'reponse' => $respData['reponse'],
             ]);
         }
 
-        return response()->json([
-            'message' => 'Vos réponses ont été enregistrées avec succès',
-            'data' => $savedResponses
-        ], 201);
+         return response()->json([
+                'message' => 'Responses saved successfully',
+                'data' => $savedResponses
+          ], 201);
+    }
+    //hada khasena nsayebohe
+    public function getRponses()
+    {
+        $medecin = Auth::user()->medecin;
+
+        $reponses = Reponse::with('reponse_questionnaires.question')
+            ->whereHas('patients', function ($query) use ($medecin) {
+                $query->where('medecin_id', $medecin->id);
+            })
+            ->get();
+
+        return response()->json($reponses);
     }
 }

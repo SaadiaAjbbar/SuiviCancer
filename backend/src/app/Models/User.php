@@ -43,4 +43,20 @@ class User extends Authenticatable
         // Relation 1:1 avec la table de liaison
         return $this->hasOne(AdminHopital::class, 'user_id');
     }
+
+    public function patient()
+    {
+        return $this->hasOne(Patient::class);
+    }
+
+    public function infermier()
+    {
+        return $this->hasOne(Infermier::class);
+    }
+
+    public function medecin()
+    {
+        // HasOne hit kol user 3ndo profil medecin wa7ed
+        return $this->hasOne(Medecin::class, 'user_id');
+    }
 }

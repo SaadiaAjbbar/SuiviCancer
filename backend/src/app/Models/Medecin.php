@@ -41,4 +41,8 @@ class Medecin extends Model
     {
         return $this->hasMany(Question::class);
     }
+
+    public function etat_general(){
+        return $this->hasMany(EtatGeneral::class);
+    }
 }

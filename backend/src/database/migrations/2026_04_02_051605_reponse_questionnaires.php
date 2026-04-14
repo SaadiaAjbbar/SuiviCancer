@@ -15,7 +15,8 @@ return new class extends Migration
         Schema::create('reponse_questionnaires', function (Blueprint $table) {
             $table->id();
             $table->string('reponse');
-            $table->foreignId('patient_id')->constrained();
+            $table->foreignId('reponses_id')->constrained()->onDelete('cascade');
+            $table->foreignId('questions_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

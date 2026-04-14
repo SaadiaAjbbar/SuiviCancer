@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-namespace App\Models;
-
 use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
@@ -13,6 +11,10 @@ class Patient extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function medecin()
+    {
+        return $this->belongsTo(Medecin::class);
     }
     public function hopital()
     {
@@ -28,6 +30,9 @@ class Patient extends Model
         return $this->hasMany(Reponse::class);
     }
 
+    public function rendez_vous() {
+        return $this->hasMany(RendezVous::class);
+    }
     public function notifications()
     {
         return $this->hasMany(Notification::class);
