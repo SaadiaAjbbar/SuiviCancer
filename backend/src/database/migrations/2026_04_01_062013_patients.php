@@ -18,8 +18,8 @@ return new class extends Migration
             $table->date('date_naissance');
             $table->string('sexe');
             $table->string('telephone');
-            $table->foreignId('hopital_id')->constrained('hopitals');
-            $table->foreignId('medecin_id')->nullable()->constrained('medecins');
+            $table->foreignId('hopital_id')->constrained('hopitals')->onDelete('cascade');;
+            $table->foreignId('medecin_id')->nullable()->constrained('medecins')->onDelete('cascade');;
             $table->timestamps();
         });
     }

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Validator;
 
 class HopitalController extends Controller
 {
+
+
     public function store(Request $request)
     {
         // 1. Validation des données
@@ -38,6 +40,13 @@ class HopitalController extends Controller
         ], 201);
     }
 
+    public function index(){
+
+    $all_hopitaux=Hopital::all();
+        return response()->json([
+            "liste"=>$all_hopitaux
+        ]);
+    }
     public function update(Request $request, $id)
     {
         $hopital = Hopital::find($id);
