@@ -1,62 +1,6 @@
-<template>
-  <div class="bilan-page">
-    <header class="page-header">
-      <h2>🩺 Mes Bilans de Santé</h2>
-      <p>Consultez l'historique de vos évaluations médicales et les conclusions du médecin.</p>
-    </header>
-
-    <div v-if="isLoading" class="loading">Analyse de vos données en cours...</div>
-
-    <div v-else-if="bilans.length > 0" class="bilan-timeline">
-      <div v-for="bilan in bilans" :key="bilan.id" class="bilan-card">
-        <div class="bilan-aside">
-          <div class="bilan-date">
-            <span class="day">{{ getDay(bilan.created_at) }}</span>
-            <span class="month">{{ getMonth(bilan.created_at) }}</span>
-          </div>
-          <div class="line"></div>
-        </div>
-
-        <div class="bilan-main">
-          <div class="bilan-header">
-            <h3>
-              {{ bilan.consultation_id ? 'Résumé de la consultation' : 'Suivi médical (Réponse)' }}
-            </h3>
-
-            <span class="doctor-name">
-              <template v-if="bilan.consultation?.medecin">
-                Par Dr. {{ bilan.consultation.medecin.user.nom }}
-              </template>
-
-              <template v-else-if="bilan.reponse?.patient?.medecin">
-                Par Dr. {{ bilan.reponse.patient.medecin.user.nom }}
-              </template>
-            </span>
-          </div>
-
-          <div class="bilan-description">
-            <p>{{ bilan.description }}</p>
-          </div>
-
-          <div class="bilan-attachments">
-            <span v-if="bilan.traitement?.length" class="attach-tag pill">💊 Traitement prescrit</span>
-            <span v-if="bilan.rendez_vous?.length" class="attach-tag rdv">📅 RDV fixé</span>
-            <span v-if="bilan.conseil?.length" class="attach-tag advice">💡 Conseil ajouté</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <span class="icon">🩺</span>
-      <h3>Aucun bilan disponible</h3>
-      <p>Vos bilans apparaîtront ici après vos consultations avec le médecin.</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
 
 const bilans = ref([]);
 const isLoading = ref(true);
@@ -86,137 +30,71 @@ const getMonth = (date) => new Date(date).toLocaleDateString('fr-FR', { month: '
 onMounted(fetchBilans);
 </script>
 
-<style scoped>
-.bilan-page {
-  max-width: 900px;
-  margin: 0 auto;
-}
+<template>
+  <div class="space-y-10 animate-in fade-in duration-500">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Mes Bilans de Santé</h1>
+      <p class="text-slate-500 font-medium max-w-2xl">Consultez l'historique de vos évaluations médicales et les conclusions de votre médecin.</p>
+    </div>
 
-.page-header {
-  margin-bottom: 40px;
-}
+    <div v-if="isLoading" class="py-20 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-500 font-bold">Analyse de vos données en cours...</p>
+    </div>
 
-.bilan-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+    <div v-else-if="bilans.length > 0" class="relative pl-8 space-y-12 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">
+      <div v-for="bilan in bilans" :key="bilan.id" class="relative flex gap-8 group">
+        <!-- Date Marker -->
+        <div class="absolute -left-[32px] top-0 z-10 w-6 h-6 bg-white border-4 border-primary rounded-full group-hover:scale-125 transition-transform"></div>
+        
+        <div class="flex flex-col items-center min-w-[60px] pt-1">
+          <div class="bg-white border-2 border-slate-100 rounded-2xl p-2 w-16 h-16 flex flex-col items-center justify-center shadow-sm group-hover:border-primary/20 transition-colors">
+            <span class="text-xl font-black text-slate-900 leading-none">{{ getDay(bilan.created_at) }}</span>
+            <span class="text-[10px] font-black text-slate-400 uppercase mt-1">{{ getMonth(bilan.created_at) }}</span>
+          </div>
+        </div>
 
-.bilan-card {
-  display: flex;
-  gap: 30px;
-}
+        <AppCard class="flex-1 hover:border-primary/20 transition-all duration-300">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 class="text-lg font-black text-slate-900">
+                {{ bilan.consultation_id ? 'Résumé de consultation' : 'Suivi médical' }}
+              </h3>
+              <p class="text-xs font-bold text-primary flex items-center gap-2 mt-1">
+                <span class="text-base">👨‍⚕️</span>
+                <template v-if="bilan.consultation?.medecin">
+                  Dr. {{ bilan.consultation.medecin.user.nom }}
+                </template>
+                <template v-else-if="bilan.reponse?.patient?.medecin">
+                  Dr. {{ bilan.reponse.patient.medecin.user.nom }}
+                </template>
+              </p>
+            </div>
+          </div>
 
-.bilan-aside {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 60px;
-}
+          <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-6">
+            <p class="text-slate-700 leading-relaxed font-medium">"{{ bilan.description }}"</p>
+          </div>
 
-.bilan-date {
-  background: #3498db;
-  color: white;
-  padding: 10px;
-  border-radius: 12px;
-  text-align: center;
-  width: 60px;
-  box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
-}
+          <div class="flex flex-wrap gap-2">
+            <span v-if="bilan.traitement?.length" class="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+              💊 Traitement prescrit
+            </span>
+            <span v-if="bilan.rendez_vous?.length" class="inline-flex items-center px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-100">
+              📅 RDV fixé
+            </span>
+            <span v-if="bilan.conseil?.length" class="inline-flex items-center px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100">
+              💡 Conseil ajouté
+            </span>
+          </div>
+        </AppCard>
+      </div>
+    </div>
 
-.bilan-date .day {
-  display: block;
-  font-size: 1.4rem;
-  font-weight: bold;
-}
-
-.bilan-date .month {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-}
-
-.line {
-  width: 2px;
-  flex-grow: 1;
-  background: #e2e8f0;
-  margin: 10px 0;
-}
-
-.bilan-main {
-  background: white;
-  flex: 1;
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-  border: 1px solid #f1f5f9;
-}
-
-.bilan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.bilan-header h3 {
-  font-size: 1.1rem;
-  color: #1e293b;
-  margin: 0;
-}
-
-.doctor-name {
-  font-size: 0.85rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.bilan-description {
-  background: #f8fafc;
-  padding: 15px;
-  border-radius: 12px;
-  color: #334155;
-  line-height: 1.6;
-  margin-bottom: 15px;
-}
-
-.bilan-attachments {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.attach-tag {
-  font-size: 0.75rem;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-weight: 600;
-}
-
-.attach-tag.pill {
-  background: #e1effe;
-  color: #1e429f;
-}
-
-.attach-tag.rdv {
-  background: #def7ed;
-  color: #03543f;
-}
-
-.attach-tag.advice {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px;
-  color: #94a3b8;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #3498db;
-}
-</style>
+    <div v-else class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+      <div class="text-7xl mb-6">🩺</div>
+      <h3 class="text-2xl font-black text-slate-900">Aucun bilan disponible</h3>
+      <p class="text-slate-500 font-medium max-w-md mx-auto mt-2">Vos bilans apparaîtront ici dès que votre médecin aura validé vos consultations ou vos réponses.</p>
+    </div>
+  </div>
+</template>
