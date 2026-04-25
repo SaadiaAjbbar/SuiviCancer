@@ -1,12 +1,17 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import AppCard from '@/components/ui/AppCard.vue';
+import AppButton from '@/components/ui/AppButton.vue';
+import AppInput from '@/components/ui/AppInput.vue';
+import BaseIcon from '@/components/ui/BaseIcon.vue';
 
 const token = localStorage.getItem('user_token');
 const currentTab = ref('medecins');
 const listData = ref([]);
 const isLoading = ref(false);
 const messageSuccess = ref('');
+const errorMessage = ref('');
 const router = useRouter();
 
 // --- FORMULAIRES ---
@@ -17,18 +22,16 @@ const formToxicite = ref({ nom: '', description: '', symptomes: [] });
 const isEditing = ref(false);
 const editId = ref(null);
 
-// Gestion de l'ajout rapide de symptômes dans le formulaire
 const showSymptomeForm = ref(false);
 const tempSymptome = ref({ nom: '', description: '' });
 
 const logout = () => {
-  localStorage.removeItem('user_token');
+  localStorage.clear();
   router.push('/login');
 };
 
-// --- CHARGEMENT DES DONNÉES ---
 const fetchData = async (endpoint) => {
-  // التغيير هنا: كنزيـدو /hopital/ غير للـ toxicites
+  isLoading.value = true;
   let apiPath = endpoint === 'toxicites' ? 'hopital/toxicites' : endpoint;
 
   try {
@@ -39,32 +42,62 @@ const fetchData = async (endpoint) => {
     listData.value = Array.isArray(result) ? result : [];
   } catch (e) {
     console.error("Erreur", e);
+  } finally {
+    isLoading.value = false;
   }
 };
-// --- CRUD MÉDECINS & INFIRMIERS ---
+
 const saveMedecin = async () => {
   const method = isEditing.value ? 'PUT' : 'POST';
   const url = isEditing.value ? `http://localhost:8080/api/medecins/${editId.value}` : 'http://localhost:8080/api/medecins';
-  const response = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-    body: JSON.stringify(formMedecin.value)
-  });
-  if (response.ok) { messageSuccess.value = "Médecin enregistré !"; resetForm(); fetchData('medecins'); }
+  
+  errorMessage.value = '';
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify(formMedecin.value)
+    });
+    if (response.ok) {
+      messageSuccess.value = isEditing.value ? "✅ Médecin mis à jour !" : "✅ Médecin enregistré !";
+      resetForm();
+      fetchData('medecins');
+      setTimeout(() => messageSuccess.value = '', 3000);
+    } else {
+      const result = await response.json();
+      errorMessage.value = result.message || Object.values(result.errors || result || {}).flat().join(' ') || "Erreur lors de l'enregistrement";
+    }
+  } catch (e) {
+    errorMessage.value = "Erreur réseau";
+    console.error(e);
+  }
 };
 
 const saveInfermier = async () => {
   const method = isEditing.value ? 'PUT' : 'POST';
   const url = isEditing.value ? `http://localhost:8080/api/infermiers/${editId.value}` : 'http://localhost:8080/api/infermiers';
-  const response = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-    body: JSON.stringify(formInfermier.value)
-  });
-  if (response.ok) { messageSuccess.value = "Infirmier(e) enregistré(e) !"; resetForm(); fetchData('infermiers'); }
+  
+  errorMessage.value = '';
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify(formInfermier.value)
+    });
+    if (response.ok) {
+      messageSuccess.value = isEditing.value ? "✅ Infirmier(e) mis à jour !" : "✅ Infirmier(e) enregistré(e) !";
+      resetForm();
+      fetchData('infermiers');
+      setTimeout(() => messageSuccess.value = '', 3000);
+    } else {
+      const result = await response.json();
+      errorMessage.value = result.message || Object.values(result.errors || result || {}).flat().join(' ') || "Erreur lors de l'enregistrement";
+    }
+  } catch (e) {
+    errorMessage.value = "Erreur réseau";
+    console.error(e);
+  }
 };
-
-// --- CRUD TOXICITÉS (MODIFIÉ AVEC LISTE) ---
 
 const addSymptomeToForm = () => {
   if (tempSymptome.value.nom) {
@@ -80,35 +113,40 @@ const removeSymptomeFromForm = (index) => {
 
 const saveToxicite = async () => {
   const method = isEditing.value ? 'PUT' : 'POST';
+  const url = isEditing.value ? `http://localhost:8080/api/hopital/toxicites/${editId.value}` : 'http://localhost:8080/api/hopital/toxicites';
 
-  const url = isEditing.value
-    ? `http://localhost:8080/api/hopital/toxicites/${editId.value}`
-    : 'http://localhost:8080/api/hopital/toxicites';
+  errorMessage.value = '';
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify({ nom: formToxicite.value.nom, description: formToxicite.value.description })
+    });
 
-  // ... باقي الكود كيبقى هو هو
-  const response = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-    body: JSON.stringify({ nom: formToxicite.value.nom, description: formToxicite.value.description })
-  });
+    if (response.ok) {
+      const result = await response.json();
+      const toxiciteId = isEditing.value ? editId.value : (result.data?.id || result.id);
 
-  if (response.ok) {
-    const result = await response.json();
-    const toxiciteId = isEditing.value ? editId.value : (result.data?.id || result.id);
-
-    // Sauvegarde des nouveaux symptômes attachés
-    for (const symp of formToxicite.value.symptomes) {
-      if (!symp.id) {
-        await fetch('http://localhost:8080/api/symptomes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ ...symp, toxicite_id: toxiciteId })
-        });
+      for (const symp of formToxicite.value.symptomes) {
+        if (!symp.id) {
+          await fetch('http://localhost:8080/api/symptomes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ ...symp, toxicite_id: toxiciteId })
+          });
+        }
       }
+      messageSuccess.value = isEditing.value ? "✅ Toxicité mise à jour !" : "✅ Toxicité ajoutée !";
+      resetForm();
+      fetchData('toxicites');
+      setTimeout(() => messageSuccess.value = '', 3000);
+    } else {
+      const result = await response.json();
+      errorMessage.value = result.message || "Erreur lors de l'enregistrement de la toxicité";
     }
-    messageSuccess.value = isEditing.value ? "Toxicité mise à jour !" : "Toxicité ajoutée !";
-    resetForm();
-    fetchData('hopital/toxicites');
+  } catch (e) {
+    errorMessage.value = "Erreur réseau";
+    console.error(e);
   }
 };
 
@@ -122,15 +160,24 @@ const preparerEditToxicite = (t) => {
   };
 };
 
+const deleteItem = async (type, id) => {
+  if (!confirm(`Voulez-vous supprimer cet élément ?`)) return;
+  await fetch(`http://localhost:8080/api/${type}/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  fetchData(type);
+};
+
 const deleteToxicite = async (id) => {
   if (!confirm("Voulez-vous supprimer cette toxicité ?")) return;
-
   await fetch(`http://localhost:8080/api/hopital/toxicites/${id}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   });
   fetchData('toxicites');
 };
+
 const deleteSymptome = async (id) => {
   if (!confirm("Supprimer ce symptôme ?")) return;
   await fetch(`http://localhost:8080/api/symptomes/${id}`, {
@@ -140,7 +187,7 @@ const deleteSymptome = async (id) => {
   if (isEditing.value) {
     formToxicite.value.symptomes = formToxicite.value.symptomes.filter(s => s.id !== id);
   }
-  fetchData('/hopital/toxicites');
+  fetchData('toxicites');
 };
 
 const resetForm = () => {
@@ -156,1084 +203,277 @@ onMounted(() => fetchData('medecins'));
 </script>
 
 <template>
-  <div class="admin-dashboard">
-    <header class="dashboard-header">
-      <div class="header-main">
-        <h1>Dashboard Admin Hôpital</h1>
-        <button @click="logout" class="btn-logout">logout <i class="fas fa-sign-out-alt"></i></button>
-      </div>
-      <nav class="tabs">
-        <button @click="currentTab = 'medecins'; resetForm(); fetchData('medecins')"
-          :class="{ active: currentTab === 'medecins' }">Médecins</button>
-        <button @click="currentTab = 'infermiers'; resetForm(); fetchData('infermiers')"
-          :class="{ active: currentTab === 'infermiers' }">Infirmiers</button>
-        <button @click="currentTab = 'toxicites'; resetForm(); fetchData('toxicites')"
-          :class="{ active: currentTab === 'toxicites' }">Toxicités</button>
-      </nav>
-    </header>
-
-    <p v-if="messageSuccess" class="alert">{{ messageSuccess }}</p>
-
-    <div v-if="currentTab === 'medecins'">
-      <section class="card">
-        <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} un Médecin</h3>
-        <form @submit.prevent="saveMedecin" class="form-grid">
-          <input v-model="formMedecin.nom" placeholder="Nom">
-          <input v-model="formMedecin.prenom" placeholder="Prénom">
-          <input v-model="formMedecin.email" placeholder="Email">
-          <input v-if="!isEditing" v-model="formMedecin.password" type="password" placeholder="Mot de passe">
-          <input v-model="formMedecin.specialite" placeholder="Spécialité">
-          <button type="submit" class="btn-save">{{ isEditing ? 'Mettre à jour' : 'Ajouter' }}</button>
-          <button v-if="isEditing" type="button" @click="resetForm">Annuler</button>
-        </form>
-      </section>
-      <table>
-        <thead>
-          <tr>
-            <th>Nom Complet</th>
-            <th>Spécialité</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="m in listData" :key="m.id">
-            <td>{{ m.user?.nom }} {{ m.user?.prenom }}</td>
-            <td>{{ m.specialite }}</td>
-            <td>
-              <button
-                @click="isEditing = true; editId = m.id; formMedecin = { ...m.user, specialite: m.specialite }">Editer</button>
-              <button @click="deleteItem('medecins', m.id)" class="btn-del">X</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="currentTab === 'infermiers'">
-      <section class="card">
-        <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} un(e) Infirmier(e)</h3>
-        <form @submit.prevent="saveInfermier" class="form-grid">
-          <input v-model="formInfermier.nom" placeholder="Nom">
-          <input v-model="formInfermier.prenom" placeholder="Prénom">
-          <input v-model="formInfermier.email" placeholder="Email">
-          <input v-if="!isEditing" v-model="formInfermier.mot_de_passe" type="password" placeholder="Mot de passe">
-          <button type="submit" class="btn-save">{{ isEditing ? 'Mettre à jour' : 'Ajouter' }}</button>
-          <button v-if="isEditing" type="button" @click="resetForm">Annuler</button>
-        </form>
-      </section>
-      <table>
-        <thead>
-          <tr>
-            <th>Nom Complet</th>
-            <th>Email</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="inf in listData" :key="inf.id">
-            <td>{{ inf.user?.nom }} {{ inf.user?.prenom }}</td>
-            <td>{{ inf.user?.email }}</td>
-            <td>
-              <button
-                @click="isEditing = true; editId = inf.id; formInfermier = { ...inf.user, mot_de_passe: '' }">Editer</button>
-              <button @click="deleteItem('infermiers', inf.id)" class="btn-del">X</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="currentTab === 'toxicites'">
-      <section class="card">
-        <h3>{{ isEditing ? 'Modifier' : 'Ajouter' }} une Toxicité</h3>
-        <form @submit.prevent="saveToxicite">
-          <div class="form-grid" style="margin-bottom: 15px;">
-            <input v-model="formToxicite.nom" placeholder="Nom (ex: Anémie)" required>
-            <input v-model="formToxicite.description" placeholder="Description">
-          </div>
-
-          <div class="symptome-section-form">
-            <label>Symptômes associés :</label>
-            <div class="tags-container">
-              <span v-for="(s, index) in formToxicite.symptomes" :key="index" class="s-tag">
-                {{ s.nom }}
-                <button type="button" @click="s.id ? deleteSymptome(s.id) : removeSymptomeFromForm(index)">x</button>
-              </span>
-              <button type="button" @click="showSymptomeForm = true" class="btn-add-pill">+ Ajouter</button>
+  <div class="min-h-screen bg-slate-50 font-sans pb-20">
+    <!-- Admin Navbar -->
+    <nav class="bg-slate-900 text-white sticky top-0 z-50 shadow-2xl shadow-slate-900/20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 border border-primary/20">
+              <BaseIcon name="hospital" :size="24" stroke-width="2.5" />
+            </div>
+            <div>
+              <span class="text-xl font-black tracking-tight block leading-none">Admin <span class="text-primary">Hôpital</span></span>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 block">Panel de Gestion</span>
             </div>
           </div>
-
-          <div style="margin-top: 15px;">
-            <button type="submit" class="btn-save">{{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}</button>
-            <button v-if="isEditing" type="button" @click="resetForm" class="btn-back"
-              style="margin-left: 10px;">Annuler</button>
-          </div>
-        </form>
-      </section>
-
-      <div v-if="showSymptomeForm" class="modal-overlay">
-        <div class="card modal-content">
-          <h4>Nouveau symptôme</h4>
-          <input v-model="tempSymptome.nom" placeholder="Nom du symptôme" class="modal-input">
-          <textarea v-model="tempSymptome.description" placeholder="Description" class="modal-input"></textarea>
-          <div class="actions">
-            <button @click="addSymptomeToForm" class="btn-save">Ajouter</button>
-            <button @click="showSymptomeForm = false" class="btn-back">Fermer</button>
+          <div class="flex items-center gap-4">
+             <button @click="logout" class="group flex items-center gap-2 px-5 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-black text-[10px] transition-all uppercase tracking-widest border border-red-500/20">
+               <BaseIcon name="logout" :size="14" class="group-hover:-translate-x-0.5 transition-transform" />
+               Déconnexion
+             </button>
           </div>
         </div>
       </div>
+      
+      <!-- Sub-nav Tabs -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-white/5">
+        <div class="flex gap-4 sm:gap-10">
+          <button 
+            v-for="tab in [
+              { id: 'medecins', name: 'Médecins', icon: 'users' },
+              { id: 'infermiers', name: 'Infirmiers', icon: 'users' },
+              { id: 'toxicites', name: 'Toxicités', icon: 'stetho' }
+            ]" 
+            :key="tab.id"
+            @click="currentTab = tab.id; resetForm(); fetchData(tab.id === 'toxicites' ? 'toxicites' : tab.id)"
+            class="flex items-center gap-2.5 px-2 py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 group"
+            :class="currentTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-200'"
+          >
+            <BaseIcon :name="tab.icon" :size="14" class="transition-transform group-hover:scale-110" />
+            {{ tab.name }}
+          </button>
+        </div>
+      </div>
+    </nav>
 
-      <table class="toxicite-table">
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Description</th>
-            <th>Symptômes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="t in listData" :key="t.id">
-            <td><strong>{{ t.nom }}</strong></td>
-            <td>{{ t.description }}</td>
-            <td>
-              <div class="pills-list">
-                <span v-for="s in t.symptomes" :key="s.id" class="mini-pill">{{ s.nom }}</span>
-              </div>
-            </td>
-            <td>
-              <button @click="preparerEditToxicite(t)" class="btn-edit-sml">Modifier</button>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div v-if="messageSuccess" class="fixed top-24 right-8 z-50 p-4 bg-emerald-500 text-white rounded-2xl shadow-xl animate-in slide-in-from-right-10 font-bold flex items-center gap-2">
+        <span>✅</span> {{ messageSuccess }}
+      </div>
 
-              <button @click="deleteToxicite(t.id)" class="btn-del-sml">Supprimer</button>
-            </td>
-          </tr>
-          <tr v-if="!listData.length">
-            <td colspan="4" style="text-align: center;">Aucune toxicité trouvée</td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="errorMessage" class="fixed top-24 right-8 z-50 p-4 bg-red-500 text-white rounded-2xl shadow-xl animate-in slide-in-from-right-10 font-bold flex items-center gap-2">
+        <span>⚠️</span> {{ errorMessage }}
+        <button @click="errorMessage = ''" class="ml-2 hover:opacity-70">×</button>
+      </div>
+
+      <!-- Content Medecins -->
+      <div v-if="currentTab === 'medecins'" class="space-y-10 animate-in fade-in duration-500">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <aside class="lg:col-span-1 space-y-6">
+            <AppCard>
+              <template #header>
+                <h3 class="text-lg font-black text-slate-900">{{ isEditing ? 'Modifier' : 'Ajouter' }} Médecin</h3>
+              </template>
+              <form @submit.prevent="saveMedecin" class="space-y-4">
+                <AppInput v-model="formMedecin.nom" label="Nom" required />
+                <AppInput v-model="formMedecin.prenom" label="Prénom" required />
+                <AppInput v-model="formMedecin.email" label="Email" type="email" required />
+                <AppInput v-if="!isEditing" v-model="formMedecin.password" label="Mot de passe" type="password" required />
+                <AppInput v-model="formMedecin.specialite" label="Spécialité" required />
+                <div class="flex flex-col gap-2 pt-4">
+                  <AppButton type="submit" custom-class="w-full">{{ isEditing ? 'Mettre à jour' : 'Ajouter' }}</AppButton>
+                  <AppButton v-if="isEditing" variant="secondary" @click="resetForm" custom-class="w-full">Annuler</AppButton>
+                </div>
+              </form>
+            </AppCard>
+          </aside>
+
+          <section class="lg:col-span-2">
+            <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-slate-50/50 border-b border-slate-100">
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médecin</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Spécialité</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="m in listData" :key="m.id" class="group hover:bg-slate-50/30 transition-all duration-300">
+                    <td class="px-8 py-6">
+                      <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-slate-100 text-slate-600 flex items-center justify-center rounded-xl font-bold group-hover:bg-primary group-hover:text-white transition-all">
+                          {{ m.user?.nom?.charAt(0) }}{{ m.user?.prenom?.charAt(0) }}
+                        </div>
+                        <div>
+                          <p class="font-black text-slate-900 group-hover:text-primary transition-colors leading-none mb-1">{{ m.user?.nom }} {{ m.user?.prenom }}</p>
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ m.user?.email }}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-8 py-6 text-sm font-bold text-slate-600 italic">
+                      {{ m.specialite }}
+                    </td>
+                    <td class="px-8 py-6 text-right">
+                      <div class="flex justify-end gap-2">
+                        <button @click="isEditing = true; editId = m.id; formMedecin = { ...m.user, specialite: m.specialite }" class="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-all"><BaseIcon name="edit" :size="16" /></button>
+                        <button @click="deleteItem('medecins', m.id)" class="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"><BaseIcon name="trash" :size="16" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Content Infermiers -->
+      <div v-if="currentTab === 'infermiers'" class="space-y-10 animate-in fade-in duration-500">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <aside class="lg:col-span-1 space-y-6">
+            <AppCard>
+              <template #header>
+                <h3 class="text-lg font-black text-slate-900">{{ isEditing ? 'Modifier' : 'Ajouter' }} Infirmier</h3>
+              </template>
+              <form @submit.prevent="saveInfermier" class="space-y-4">
+                <AppInput v-model="formInfermier.nom" label="Nom" required />
+                <AppInput v-model="formInfermier.prenom" label="Prénom" required />
+                <AppInput v-model="formInfermier.email" label="Email" type="email" required />
+                <AppInput v-if="!isEditing" v-model="formInfermier.mot_de_passe" label="Mot de passe" type="password" required />
+                <div class="flex flex-col gap-2 pt-4">
+                  <AppButton type="submit" custom-class="w-full">{{ isEditing ? 'Mettre à jour' : 'Ajouter' }}</AppButton>
+                  <AppButton v-if="isEditing" variant="secondary" @click="resetForm" custom-class="w-full">Annuler</AppButton>
+                </div>
+              </form>
+            </AppCard>
+          </aside>
+
+          <section class="lg:col-span-2">
+            <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-slate-50/50 border-b border-slate-100">
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Infirmier(e)</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="inf in listData" :key="inf.id" class="group hover:bg-slate-50/30 transition-all duration-300">
+                    <td class="px-8 py-6">
+                      <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-slate-100 text-slate-600 flex items-center justify-center rounded-xl font-bold group-hover:bg-primary group-hover:text-white transition-all">
+                          {{ inf.user?.nom?.charAt(0) }}{{ inf.user?.prenom?.charAt(0) }}
+                        </div>
+                        <p class="font-black text-slate-900 group-hover:text-primary transition-colors">{{ inf.user?.nom }} {{ inf.user?.prenom }}</p>
+                      </div>
+                    </td>
+                    <td class="px-8 py-6 text-sm font-bold text-slate-400">
+                      {{ inf.user?.email }}
+                    </td>
+                    <td class="px-8 py-6 text-right">
+                      <div class="flex justify-end gap-2">
+                        <button @click="isEditing = true; editId = inf.id; formInfermier = { ...inf.user, mot_de_passe: '' }" class="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-all"><BaseIcon name="edit" :size="16" /></button>
+                        <button @click="deleteItem('infermiers', inf.id)" class="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"><BaseIcon name="trash" :size="16" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Content Toxicites -->
+      <div v-if="currentTab === 'toxicites'" class="space-y-10 animate-in fade-in duration-500">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <aside class="lg:col-span-1 space-y-6">
+            <AppCard>
+              <template #header>
+                <h3 class="text-lg font-black text-slate-900">{{ isEditing ? 'Modifier' : 'Ajouter' }} Toxicité</h3>
+              </template>
+              <form @submit.prevent="saveToxicite" class="space-y-6">
+                <AppInput v-model="formToxicite.nom" label="Nom (ex: Anémie)" required />
+                <div class="flex flex-col gap-1.5 w-full">
+                  <label class="text-sm font-semibold text-slate-700">Description</label>
+                  <textarea v-model="formToxicite.description" placeholder="Description courte..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none h-24 text-sm font-medium"></textarea>
+                </div>
+
+                <div class="space-y-3">
+                  <label class="text-xs font-black text-slate-400 uppercase tracking-widest block">Symptômes associés</label>
+                  <div class="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 min-h-[60px]">
+                    <span v-for="(s, index) in formToxicite.symptomes" :key="index" class="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm">
+                      {{ s.nom }}
+                      <button type="button" @click="s.id ? deleteSymptome(s.id) : removeSymptomeFromForm(index)" class="text-red-500 font-black hover:scale-125 transition-transform">×</button>
+                    </span>
+                    <button type="button" @click="showSymptomeForm = true" class="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all">+ Ajouter</button>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-2 pt-4">
+                  <AppButton type="submit" custom-class="w-full">{{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}</AppButton>
+                  <AppButton v-if="isEditing" variant="secondary" @click="resetForm" custom-class="w-full">Annuler</AppButton>
+                </div>
+              </form>
+            </AppCard>
+          </aside>
+
+          <section class="lg:col-span-2">
+            <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-slate-50/50 border-b border-slate-100">
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Toxicité</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Symptômes</th>
+                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="t in listData" :key="t.id" class="group hover:bg-slate-50/30 transition-all duration-300">
+                    <td class="px-8 py-6">
+                      <p class="font-black text-slate-900 group-hover:text-primary transition-colors mb-1">{{ t.nom }}</p>
+                      <p class="text-xs text-slate-400 font-medium italic line-clamp-1">{{ t.description }}</p>
+                    </td>
+                    <td class="px-8 py-6">
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="s in t.symptomes" :key="s.id" class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest rounded-md">
+                          {{ s.nom }}
+                        </span>
+                        <span v-if="!t.symptomes?.length" class="text-[9px] font-bold text-slate-300 italic">Aucun</span>
+                      </div>
+                    </td>
+                    <td class="px-8 py-6 text-right">
+                      <div class="flex justify-end gap-2">
+                        <button @click="preparerEditToxicite(t)" class="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-all"><BaseIcon name="edit" :size="16" /></button>
+                        <button @click="deleteToxicite(t.id)" class="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"><BaseIcon name="trash" :size="16" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!listData.length">
+                    <td colspan="3" class="px-8 py-20 text-center">
+                      <p class="text-slate-400 font-bold">Aucune toxicité trouvée.</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- Symptome Modal -->
+    <div v-if="showSymptomeForm" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+          <h4 class="text-xl font-black text-slate-900">Nouveau symptôme</h4>
+          <button @click="showSymptomeForm = false" class="text-slate-400 text-2xl">×</button>
+        </div>
+        <div class="p-8 space-y-4">
+          <AppInput v-model="tempSymptome.nom" label="Nom" placeholder="Ex: Fatigue intense" />
+          <div class="flex flex-col gap-1.5 w-full">
+            <label class="text-sm font-semibold text-slate-700">Description</label>
+            <textarea v-model="tempSymptome.description" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none h-24 resize-none text-sm"></textarea>
+          </div>
+        </div>
+        <div class="p-8 bg-slate-50 flex gap-4">
+          <AppButton @click="addSymptomeToForm" custom-class="flex-1">Ajouter</AppButton>
+          <AppButton variant="secondary" @click="showSymptomeForm = false" custom-class="flex-1">Fermer</AppButton>
+        </div>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* STYLES GÉNÉRAUX */
-.admin-dashboard {
-  padding: 20px;
-  max-width: 1100px;
-  margin: auto;
-  font-family: sans-serif;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.btn-logout {
-  background-color: #ff4757;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.tabs {
-  margin-bottom: 20px;
-  border-bottom: 2px solid #eee;
-  display: flex;
-  gap: 10px;
-  padding-bottom: 10px;
-}
-
-.tabs button {
-  padding: 10px 25px;
-  border: none;
-  cursor: pointer;
-  background: #f1f2f6;
-  border-radius: 6px;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.tabs button.active {
-  background: #3498db;
-  color: white;
-}
-
-.card {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  margin-bottom: 30px;
-}
-
-.form-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.form-grid input {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  flex: 1;
-  min-width: 200px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-th,
-td {
-  border: 1px solid #eee;
-  padding: 15px;
-  text-align: left;
-}
-
-th {
-  background: #f4f4f4;
-  color: #333;
-}
-
-.btn-save {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 12px 25px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-del {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.alert {
-  background: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
-}
-
-/* SPÉCIFIQUE TOXICITÉ */
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-  border: 1px dashed #bbb;
-  padding: 10px;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.s-tag {
-  background: #e1f5fe;
-  color: #0288d1;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.s-tag button {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1rem;
-}
-
-.btn-add-pill {
-  background: #f1f2f6;
-  border: 1px solid #ccc;
-  padding: 5px 15px;
-  border-radius: 20px;
-  cursor: pointer;
-}
-
-.mini-pill {
-  background: #f0f0f0;
-  padding: 3px 8px;
-  border-radius: 4px;
-  margin-right: 4px;
-  font-size: 0.75rem;
-  color: #666;
-  display: inline-block;
-}
-
-.btn-edit-sml {
-  background: #f39c12;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 5px;
-}
-
-.btn-del-sml {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* MODAL */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  width: 400px;
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-}
-
-.modal-input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-
-.btn-back {
-  background: #95a5a6;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* REPRISE EXACTE DE TES STYLES */
-.admin-dashboard {
-  padding: 20px;
-  max-width: 1000px;
-  margin: auto;
-  font-family: sans-serif;
-}
-
-.tabs {
-  margin-bottom: 20px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
-  display: flex;
-}
-
-.tabs button {
-  padding: 10px 20px;
-  margin-right: 10px;
-  border: none;
-  cursor: pointer;
-  background: #f4f4f4;
-  border-radius: 5px;
-  font-weight: bold;
-}
-
-.tabs button.active {
-  background: #3498db;
-  color: white;
-}
-
-.card {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #ddd;
-}
-
-.form-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.form-grid input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  flex: 1;
-  min-width: 180px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background: white;
-}
-
-th,
-td {
-  border: 1px solid #eee;
-  padding: 12px;
-  text-align: left;
-}
-
-th {
-  background: #f4f4f4;
-}
-
-.btn-save {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-del {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.alert {
-  background: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
-}
-
-/* STYLES TOXICITÉ */
-.symptome-box {
-  background: white;
-  padding: 10px;
-  border: 1px dashed #ccc;
-  border-radius: 5px;
-}
-
-.tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 5px;
-}
-
-.s-tag {
-  background: #e1f5fe;
-  color: #0288d1;
-  padding: 4px 10px;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.s-tag button {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-add-tag {
-  background: #f1f2f6;
-  border: 1px solid #ddd;
-  padding: 4px 12px;
-  border-radius: 15px;
-  cursor: pointer;
-}
-
-.toxicite-item {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 10px;
-}
-
-.toxicite-header {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #f9f9f9;
-  padding-bottom: 5px;
-}
-
-.btns {
-  display: flex;
-  gap: 5px;
-}
-
-.btn-edit-sml {
-  background: #f39c12;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-del-sml {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.pills-container {
-  margin-top: 8px;
-}
-
-.pill {
-  background: #eee;
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-right: 5px;
-  font-size: 0.75rem;
-  color: #555;
-}
-
-/* MODAL & LOGOUT */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal-content {
-  width: 350px;
-  background: white;
-  padding: 20px;
-}
-
-.modal-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.btn-logout {
-  background-color: #ff4757;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-back {
-  background: #95a5a6;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* TES STYLES PRÉCÉDENTS RÉUTILISÉS */
-.admin-dashboard {
-  padding: 20px;
-  max-width: 1000px;
-  margin: auto;
-  font-family: sans-serif;
-}
-
-.tabs {
-  margin-bottom: 20px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
-  display: flex;
-}
-
-.tabs button {
-  padding: 10px 20px;
-  margin-right: 10px;
-  border: none;
-  cursor: pointer;
-  background: #f4f4f4;
-  border-radius: 5px;
-  font-weight: bold;
-}
-
-.tabs button.active {
-  background: #3498db;
-  color: white;
-}
-
-.card {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #ddd;
-}
-
-.form-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.form-grid input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  flex: 1;
-  min-width: 180px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background: white;
-}
-
-th,
-td {
-  border: 1px solid #eee;
-  padding: 12px;
-  text-align: left;
-}
-
-th {
-  background: #f4f4f4;
-}
-
-.btn-save {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-del {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.alert {
-  background: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
-}
-
-/* STYLES TOXICITÉ & SYMPTÔMES */
-.symptome-multi-box {
-  background: #fff;
-  border: 1px dashed #bbb;
-  padding: 10px;
-  border-radius: 5px;
-}
-
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.symptome-tag {
-  background: #e1f5fe;
-  color: #0288d1;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.symptome-tag button {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-add-symptome-tag {
-  background: #eee;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  padding: 5px 12px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.symptomes-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.pill {
-  background: #f1f1f1;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.toxicite-item {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-.toxicite-header {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 10px;
-}
-
-/* MODAL & LOGOUT */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal-content {
-  width: 400px;
-  background: white;
-  padding: 25px;
-}
-
-.modal-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.btn-logout {
-  background-color: #ff4757;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-back {
-  background: #95a5a6;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* Conserve tes styles précédents */
-.admin-dashboard {
-  padding: 20px;
-  max-width: 1000px;
-  margin: auto;
-  font-family: sans-serif;
-}
-
-.tabs {
-  margin-bottom: 20px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
-  display: flex;
-}
-
-.tabs button {
-  padding: 10px 20px;
-  margin-right: 10px;
-  border: none;
-  cursor: pointer;
-  background: #f4f4f4;
-  border-radius: 5px;
-  font-weight: bold;
-}
-
-.tabs button.active {
-  background: #3498db;
-  color: white;
-}
-
-.card {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #ddd;
-}
-
-.form-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.form-grid input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  flex: 1;
-  min-width: 180px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background: white;
-}
-
-th,
-td {
-  border: 1px solid #eee;
-  padding: 12px;
-  text-align: left;
-}
-
-th {
-  background: #f4f4f4;
-}
-
-.btn-save {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-del {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.alert {
-  background: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
-}
-
-.toxicite-item {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-.toxicite-header {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-}
-
-.desc {
-  color: #666;
-  font-size: 0.9rem;
-  margin-top: 5px;
-}
-
-.symptomes-section h5 {
-  margin: 0 0 10px 0;
-  color: #2c3e50;
-}
-
-.symptomes-section ul {
-  list-style: none;
-  padding: 0;
-}
-
-.symptomes-section li {
-  display: flex;
-  justify-content: space-between;
-  background: #f8f9fa;
-  padding: 5px 10px;
-  margin-bottom: 5px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.btn-txt-del {
-  color: #e74c3c;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-}
-
-.btn-add-symptome {
-  background: none;
-  border: 1px dashed #3498db;
-  color: #3498db;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal-content {
-  width: 350px;
-  background: white;
-}
-
-.btn-back {
-  background: #95a5a6;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.btn-logout {
-  background-color: #ff4757;
-  /* لون أحمر هادئ */
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-logout:hover {
-  background-color: #ff6b81;
-  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
-}
-
-/* تعديل بسيط للهيدر ليتناسب مع الزر */
-.dashboard-header {
-  border-bottom: 2px solid #eee;
-  margin-bottom: 20px;
-}
-</style>
