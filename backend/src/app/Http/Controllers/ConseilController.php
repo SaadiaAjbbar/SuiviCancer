@@ -29,9 +29,18 @@ class ConseilController extends Controller
         ]);
 
         $etat = EtatGeneral::findOrFail($request->etat_general_id);
+        $repons = EtatGeneral::find($request->etat_general_id)->reponse;
+
+        if ($etat->consultation) {
+            $patientId = $etat->consultation->patient_id;
+        } else if ($repons) {
+            $patientId = $repons->patient_id;
+        } else {
+            return response()->json(['message' => 'État général invalide, ni consultation ni réponse associée'], 400);
+        }
 
         // N-jbdou patient_id men l-Etat General (soit consultation soit reponse)
-        $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponses_id;
+        // $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponses_id;
 
         $conseil = Conseil::create([
             'date' => now(), // Drna l-weqt dyal daba automatique
@@ -56,5 +65,23 @@ class ConseilController extends Controller
         $conseil = Conseil::findOrFail($id);
         $conseil->delete();
         return response()->json(['message' => 'Conseil supprimé']);
+    }
+    public function getPatientConseils()
+    {
+        $user = Auth::user();
+        $patient = $user->patient;
+
+        if (!$patient) {
+            return response()->json(['message' => 'Profil patient non trouvé'], 404);
+        }
+
+        // On récupère les conseils avec les infos du médecin via l'Etat General
+        $conseils = Conseil::where('patient_id', $patient->id)
+            ->with(['etatGeneral.consultation.medecin.user'])
+            ->with('etatGeneral.reponse.medecin.user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($conseils);
     }
 }

@@ -38,4 +38,15 @@ class AdminController extends Controller
 
         return response()->json(['message' => 'Admin Hôpital créé et lié avec succès'], 201);
     }
+
+    // f App\Http\Controllers\AuthController.php (aw ay controller dyal l-authentification)
+    public function logout(Request $request)
+    {
+        // Kan-ms7ou l-token li khdam bih l-user daba
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Déconnecté avec succès'
+        ]);
+    }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EtatGeneral extends Model
 {
-    protected $fillable = ['description', 'consultation_id', 'reponse_questionnaire_id', 'reponses_id'];
+    protected $fillable = ['description', 'consultation_id', 'reponse_id'];
 
     public function consultation()
     {
@@ -14,9 +14,9 @@ class EtatGeneral extends Model
     }
 
 
-    public function Reponse()
+    public function reponse()
     {
-        return $this->belongsTo(Reponse::class);
+        return $this->belongsTo(Reponse::class, 'reponse_id');
     }
 
     // Décisions optionnelles

@@ -76,6 +76,10 @@ const login = async () => {
         router.push('/admin-hopital-dashboard');
       } else if (data.user && data.user.role === 'INFIRMIERE') {
         router.push('/dashboard-infirmier');
+      } else if (data.user.role === 'MEDECIN') {
+        router.push('/medecin');
+      } else if (data.user.role === 'PATIENT') {
+        router.push('/patient');
       }
       else {
         console.log("Redirection vers l'accueil...");

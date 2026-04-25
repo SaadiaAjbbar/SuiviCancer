@@ -1,36 +1,93 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const token = localStorage.getItem('user_token');
-const currentTab = ref('patients'); // patients, rendez-vous, notifications
-const listPatients = ref([]);
-const message = ref('');
 
-// Formulaire Patient
+// États
+const currentTab = ref('patients');
+const listPatients = ref([]);
+const medecinsDisponibles = ref([]);
+const message = ref('');
+const isLoading = ref(false);
+const isEditing = ref(false);
+const editingId = ref(null);
+
+// Formulaire
 const formPatient = ref({
   nom: '',
   prenom: '',
+  email: '',
+  password: '',
   date_naissance: '',
   sexe: 'M',
   telephone: '',
-  adresse: ''
+  adresse: '',
+  medecin_id: ''
 });
 
-// --- CHARGEMENT ---
+// --- CHARGEMENT DES DONNÉES ---
+
 const fetchPatients = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/patients', {
+    const response = await fetch('http://localhost:8080/api/infirmiers/patients', {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
-    listPatients.value = await response.json();
-  } catch (e) { console.error("Erreur patients"); }
+    const data = await response.json();
+    listPatients.value = Array.isArray(data) ? data : (data.liste || []);
+  } catch (e) {
+    console.error("Erreur patients", e);
+  }
+};
+
+const fetchMedecinsMemeHopital = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/infirmiers/medecins', {
+      headers: { 'Authorization': `Bearer ${token}`,
+       'Accept': 'application/json' }
+    });
+    const data = await response.json();
+    medecinsDisponibles.value = Array.isArray(data) ? data : (data.liste || []);
+  } catch (e) {
+    console.error("Erreur médecins", e);
+  }
 };
 
 // --- ACTIONS ---
-const ajouterPatient = async () => {
+
+const handleLogout = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/patients', {
+    await fetch('http://localhost:8080/api/logout', {
       method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+  } catch (e) {
+    console.error("Erreur déconnexion", e);
+  } finally {
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('user_role');
+    router.push('/login');
+  }
+};
+
+// Soumission du formulaire (Ajout ou Modification)
+const enregistrerPatient = async () => {
+  if (!formPatient.value.medecin_id) {
+    alert("Veuillez sélectionner un médecin référent.");
+    return;
+  }
+
+  isLoading.value = true;
+  const url = isEditing.value
+    ? `http://localhost:8080/api/infirmiers/patients/${editingId.value}`
+    : 'http://localhost:8080/api/infirmiers/patients';
+
+  const method = isEditing.value ? 'PUT' : 'POST';
+
+  try {
+    const response = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -38,183 +95,399 @@ const ajouterPatient = async () => {
       },
       body: JSON.stringify(formPatient.value)
     });
+
     if (response.ok) {
-      message.value = "Patient ajouté avec succès !";
-      formPatient.value = { nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '', adresse: '' };
+      message.value = isEditing.value ? "Patient mis à jour avec succès !" : "Patient enregistré avec succès !";
+      resetFormulaire();
       fetchPatients();
+      // Effacer le message après 3 secondes
+      setTimeout(() => message.value = '', 3000);
+    } else {
+      const errorData = await response.json();
+      alert("Erreur: " + (errorData.message || "Action impossible"));
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-onMounted(fetchPatients);
+const preparerModification = (patient) => {
+  isEditing.value = true;
+  editingId.value = patient.id;
+
+  formPatient.value = {
+    nom: patient.user.nom,
+    prenom: patient.user.prenom,
+    email: patient.user.email,
+    password: '', // On ne remplit pas le password par sécurité
+    date_naissance: patient.date_naissance,
+    sexe: patient.sexe,
+    telephone: patient.telephone,
+    adresse: patient.adresse || '',
+    medecin_id: patient.medecin_id
+  };
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const supprimerPatient = async (id) => {
+  if (!confirm("Voulez-vous vraiment supprimer ce patient ? Cette action est irréversible.")) return;
+
+  try {
+    const response = await fetch(`http://localhost:8080/api/infirmiers/patients/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      message.value = "Patient supprimé.";
+      fetchPatients();
+      setTimeout(() => message.value = '', 3000);
+    }
+  } catch (e) {
+    console.error("Erreur suppression", e);
+  }
+};
+
+const resetFormulaire = () => {
+  isEditing.value = false;
+  editingId.value = null;
+  formPatient.value = {
+    nom: '', prenom: '', email: '', password: '',
+    date_naissance: '', sexe: 'M', telephone: '', adresse: '', medecin_id: ''
+  };
+};
+
+onMounted(() => {
+  fetchPatients();
+  fetchMedecinsMemeHopital();
+});
 </script>
 
 <template>
   <div class="infirmier-container">
     <nav class="navbar">
-      <div class="logo">E-Sante | Infirmier</div>
+      <div class="logo">E-Sante | Espace Infirmier</div>
       <ul class="nav-links">
-        <li @click="currentTab = 'patients'" :class="{ active: currentTab === 'patients' }">Patients</li>
-        <li @click="currentTab = 'rendez-vous'" :class="{ active: currentTab === 'rendez-vous' }">Rendez-vous</li>
-        <li @click="currentTab = 'notifications'" :class="{ active: currentTab === 'notifications' }">Notifications</li>
+        <li @click="currentTab = 'patients'" :class="{ active: currentTab === 'patients' }">Gestion Patients</li>
       </ul>
-      <button class="btn-logout">Déconnexion</button>
+      <button class="btn-logout" @click="handleLogout">Déconnexion</button>
     </nav>
 
     <div class="content">
-      <p v-if="message" class="alert">{{ message }}</p>
+      <transition name="fade">
+        <div v-if="message" class="alert-success">{{ message }}</div>
+      </transition>
 
       <div v-if="currentTab === 'patients'">
-        <div class="header-section">
-          <h2>Gestion des Patients</h2>
-          <button @click="currentTab = 'patients'" class="btn-primary">+ Nouveau Patient</button>
-        </div>
-
         <section class="card form-box">
-          <h3>Formulaire d'admission</h3>
-          <form @submit.prevent="ajouterPatient" class="grid-form">
-            <input v-model="formPatient.nom" placeholder="Nom" required>
-            <input v-model="formPatient.prenom" placeholder="Prénom" required>
-            <input v-model="formPatient.date_naissance" type="date" required>
-            <select v-model="formPatient.sexe">
-              <option value="M">Masculin</option>
-              <option value="F">Féminin</option>
-            </select>
-            <input v-model="formPatient.telephone" placeholder="Téléphone">
-            <input v-model="formPatient.adresse" placeholder="Adresse">
-            <button type="submit" class="btn-submit">Enregistrer le patient</button>
+          <div class="form-header">
+            <h3>{{ isEditing ? '📝 Modifier le Patient' : '👤 Admission Nouveau Patient' }}</h3>
+            <button v-if="isEditing" @click="resetFormulaire" class="btn-cancel-top">Annuler l'édition</button>
+          </div>
+
+          <form @submit.prevent="enregistrerPatient" class="grid-form">
+            <div class="input-group">
+              <label>Nom</label>
+              <input v-model="formPatient.nom" placeholder="Nom" required>
+            </div>
+            <div class="input-group">
+              <label>Prénom</label>
+              <input v-model="formPatient.prenom" placeholder="Prénom" required>
+            </div>
+            <div class="input-group">
+              <label>Email</label>
+              <input v-model="formPatient.email" type="email" placeholder="Email" required>
+            </div>
+            <div class="input-group">
+              <label>Mot de passe {{ isEditing ? '(Optionnel)' : '' }}</label>
+              <input v-model="formPatient.password" type="password" :required="!isEditing">
+            </div>
+            <div class="input-group">
+              <label>Date de naissance</label>
+              <input v-model="formPatient.date_naissance" type="date" required>
+            </div>
+            <div class="input-group">
+              <label>Sexe</label>
+              <select v-model="formPatient.sexe">
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Médecin Référent</label>
+              <select v-model="formPatient.medecin_id" required>
+                <option value="" disabled>Choisir un médecin</option>
+                <option v-for="m in medecinsDisponibles" :key="m.id" :value="m.id">
+                  Dr. {{ m.user?.nom }} ({{ m.specialite }})
+                </option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Téléphone</label>
+              <input v-model="formPatient.telephone" placeholder="06XXXXXXXX">
+            </div>
+            <div class="input-group full-width">
+              <label>Adresse</label>
+              <input v-model="formPatient.adresse" placeholder="Adresse complète">
+            </div>
+
+            <button type="submit" :class="isEditing ? 'btn-update' : 'btn-submit'" :disabled="isLoading">
+              {{ isLoading ? 'Opération en cours...' : (isEditing ? 'Enregistrer les modifications' : 'Valider l\'admission') }}
+            </button>
           </form>
         </section>
 
-        <table class="table-custom">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Prénom</th>
-              <th>Sexe</th>
-              <th>Téléphone</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in listPatients" :key="p.id">
-              <td>{{ p.nom }}</td>
-              <td>{{ p.prenom }}</td>
-              <td>{{ p.sexe }}</td>
-              <td>{{ p.telephone }}</td>
-              <td>
-                <button class="btn-view">Dossier</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div v-if="currentTab === 'rendez-vous'">
-        <h2>Prise de Rendez-vous</h2>
-        <p>Interface pour lier un patient à un médecin...</p>
-      </div>
-
-      <div v-if="currentTab === 'notifications'">
-        <h2>Envoyer une Notification</h2>
-        <p>Envoyer des rappels par Email/SMS aux patients...</p>
+        <div class="table-container card">
+          <h3>Liste des patients hospitalisés</h3>
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Médecin Référent</th>
+                <th>Sexe</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in listPatients" :key="p.id">
+                <td>
+                  <div class="patient-info">
+                    <span class="p-name">{{ p.user?.nom }} {{ p.user?.prenom }}</span>
+                    <span class="p-email">{{ p.user?.email }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge-med">Dr. {{ p.medecin?.user?.nom || 'Non assigné' }}</span>
+                </td>
+                <td>{{ p.sexe }}</td>
+                <td>{{ p.telephone }}</td>
+                <td class="actions-cell">
+                  <button class="btn-edit" @click="preparerModification(p)" title="Modifier">
+                    Modifier
+                  </button>
+                  <button class="btn-delete" @click="supprimerPatient(p.id)" title="Supprimer">
+                    Supprimer
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="listPatients.length === 0">
+                <td colspan="5" style="text-align: center; padding: 2rem; color: #7f8c8d;">
+                  Aucun patient trouvé.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Configuration Générale */
+.infirmier-container {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: #f0f2f5;
+  min-height: 100vh;
+  color: #2c3e50;
+}
+
+/* Navbar */
 .navbar {
+  background: #1a252f;
+  color: white;
   display: flex;
   justify-content: space-between;
+  padding: 0.8rem 5%;
   align-items: center;
-  background: #2c3e50;
-  color: white;
-  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .nav-links {
   display: flex;
   list-style: none;
-  gap: 20px;
+  gap: 2.5rem;
 }
 
 .nav-links li {
   cursor: pointer;
-  opacity: 0.8;
-  transition: 0.3s;
+  font-weight: 500;
+  transition: color 0.3s;
 }
 
-.nav-links li.active,
-.nav-links li:hover {
-  opacity: 1;
+.nav-links li.active {
+  color: #3498db;
   border-bottom: 2px solid #3498db;
 }
 
+/* Contenu */
 .content {
-  padding: 30px;
-  max-width: 1100px;
-  margin: auto;
+  padding: 2rem 5%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+/* Formulaire */
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 0.5rem;
 }
 
 .grid-form {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.2rem;
 }
 
-.grid-form input,
-.grid-form select {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.full-width { grid-column: 1 / -1; }
+
+input, select {
+  padding: 0.7rem;
+  border: 1px solid #dcdde1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+input:focus { border-color: #3498db; outline: none; }
+
+/* Boutons */
 .btn-submit {
+  grid-column: 1 / -1;
   background: #27ae60;
   color: white;
   border: none;
-  grid-column: span 3;
-  padding: 12px;
-  cursor: pointer;
-  border-radius: 5px;
+  padding: 0.9rem;
+  border-radius: 6px;
   font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
 }
+
+.btn-update {
+  grid-column: 1 / -1;
+  background: #f39c12;
+  color: white;
+  border: none;
+  padding: 0.9rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-cancel-top {
+  background: #95a5a6;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Tableau */
+.table-container h3 { margin-bottom: 1.2rem; }
 
 .table-custom {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 30px;
 }
 
-.table-custom th,
-.table-custom td {
-  padding: 12px;
+.table-custom th {
   text-align: left;
-  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  padding: 1rem;
+  color: #7f8c8d;
+  font-size: 0.9rem;
 }
 
-.btn-primary {
+.table-custom td { padding: 1rem; border-bottom: 1px solid #f1f2f6; }
+
+.patient-info { display: flex; flex-direction: column; }
+.p-name { font-weight: 600; color: #2c3e50; }
+.p-email { font-size: 0.8rem; color: #95a5a6; }
+
+.badge-med {
+  background: #e1f5fe;
+  color: #0288d1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* Actions */
+.actions-cell { display: flex; gap: 0.5rem; }
+
+.btn-edit {
   background: #3498db;
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-delete {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-logout {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 6px 15px;
   border-radius: 5px;
   cursor: pointer;
 }
 
-.alert {
-  background: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
+/* Alertes */
+.alert-success {
+  background: #27ae60;
+  color: white;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

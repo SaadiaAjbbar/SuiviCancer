@@ -31,9 +31,17 @@ class TraitementController extends Controller
         ]);
 
         $etat = EtatGeneral::findOrFail($request->etat_general_id);
+        $repons = EtatGeneral::find($request->etat_general_id)->reponse;
+        if ($etat->consultation) {
+            $patientId = $etat->consultation->patient_id;
+        } else if ($repons) {
+            $patientId = $repons->patient_id;
+        } else {
+            return response()->json(['message' => 'État général invalide, ni consultation ni réponse associée'], 400);
+        }
 
         // Logic bach n-jbdou patient_id automatique
-        $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponse->patients_id;
+        // $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponse->patients_id;
 
         $traitement = Traitement::create([
             'nom' => $request->nom,
@@ -59,4 +67,45 @@ class TraitementController extends Controller
         $traitement->delete();
         return response()->json(['message' => 'Traitement supprimé']);
     }
+
+    /* public function getPatientTraitements()
+    {
+        $user = Auth::user();
+        $patient = $user->patient;
+
+        if (!$patient) {
+            return response()->json(['message' => 'Profil patient non trouvé'], 404);
+        }
+
+        // On récupère les traitements avec les infos du médecin qui les a prescrits
+        $traitements = Traitement::where('patient_id', $patient->id)
+            ->with(['etatGeneral.consultation.medecin.user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($traitements);
+    }*/
+    public function getPatientTraitements()
+{
+    $user = Auth::user();
+
+    // Checki wach l-user 3ndo profil patient
+    if (!$user->patient) {
+        return response()->json(['message' => 'Profil patient non trouvé'], 404);
+    }
+
+    $patient_id = $user->patient->id;
+
+    // Hna ghadi njibu ay traitement fih l-id dyal had l-patient
+    // Bla ma n-diro whereHas, ghir direct where 3la l-column
+    $traitements = Traitement::where('patient_id', $patient_id)
+        ->with([
+            'etatGeneral.consultation.medecin.user',
+            'etatGeneral.reponse.patient.medecin.user'
+        ])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json($traitements);
+}
 }

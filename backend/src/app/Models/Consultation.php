@@ -18,7 +18,7 @@ class Consultation extends Model
     }
     public function etatGeneral()
     {
-        return $this->hasOne(EtatGeneral::class);
+        return $this->hasOne(EtatGeneral::class)->with(['traitement', 'rendezVous', 'conseil']);
     }
 
     // Relations Many-to-Many

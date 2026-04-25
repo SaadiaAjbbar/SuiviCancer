@@ -14,7 +14,7 @@ return new class extends Migration
             $table->text('description');
             // Source flexible : soit consultation, soit questionnaire
             $table->foreignId('consultation_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('reponses_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('reponse_id')->nullable()->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -22,7 +22,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void    
+    public function down(): void
     {
 
     }

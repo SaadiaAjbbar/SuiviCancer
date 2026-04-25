@@ -15,12 +15,23 @@ class MedecinController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+        if ($user->role == "ADMINHOPITAL") {
+            $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
 
-        $medecins = Medecin::where('hopital_id', $adminHopital->hopital_id)
-            ->with('user')
-            ->get();
-        return response()->json($medecins);
+
+            $medecins = Medecin::where('hopital_id', $adminHopital->hopital_id)
+                ->with('user')
+                ->get();
+            return response()->json($medecins);
+        }else if($user->role == "INFIRMIERE"){
+             $infermier = $user->infermier; // Khass t'koun derti la relation f User.php
+
+
+            $medecins = Medecin::where('hopital_id', $infermier->hopital_id)
+                ->with('user')
+                ->get();
+            return response()->json($medecins);
+        }
     }
 
     public function store(Request $request)

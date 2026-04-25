@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hopital;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -80,7 +81,18 @@ class HopitalController extends Controller
             return response()->json(['message' => 'Hôpital introuvable'], 404);
         }
 
-        $hopital->delete();
+        try {
+            $hopital->delete();
+        } catch (QueryException $e) {
+            // SQLSTATE 23000/23503 indicates FK constraint violation (dependent records exist)
+            if (in_array($e->getCode(), ['23000', '23503'])) {
+                return response()->json([
+                    'message' => 'Impossible de supprimer cet hôpital car il est lié à d\'autres enregistrements.'
+                ], 409);
+            }
+
+            throw $e;
+        }
 
         return response()->json([
             'message' => 'Hôpital supprimé avec succès'

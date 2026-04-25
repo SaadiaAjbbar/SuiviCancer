@@ -8,23 +8,27 @@ class Reponse extends Model
 {
     protected $fillable = ['titre', 'patient_id'];
 
-    public function etats_generals()
+    public function etat_general()
     {
-        return $this->hasOne(EtatGeneral::class);
+        return $this->hasOne(EtatGeneral::class,'reponse_id');
     }
-    public function patients()
+    public function patient()
     {
-        return $this->belongsTo(Patient::class,'patient_id');
+        return $this->belongsTo(Patient::class, 'patient_id');
     }
-    public function medecins()
+    public function medecin()
     {
-        return $this->belongsTo(Medecin::class);
+        return $this->belongsTo(Medecin::class, 'medecin_id');
     }
-    public function reponse_questionnaires(){
-        return $this->hasMany(reponse_questionnaires::class , 'reponses_id');
+    public function reponse_questionnaires()
+    {
+        return $this->hasMany(reponse_questionnaires::class, 'reponses_id');
     }
-    public function questions() {
-    return $this->belongsToMany(Question::class, 'reponse_questionnaires', 'reponses_id', 'questions_id')
-                ->withPivot('reponse');
-}
+    public function question()
+    {
+        return $this->belongsToMany(Question::class, 'reponse_questionnaires', 'reponses_id', 'questions_id')
+            ->withPivot('reponse');
+    }
+
+
 }

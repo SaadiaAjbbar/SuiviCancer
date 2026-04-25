@@ -117,6 +117,31 @@ const modifierHopital = async () => {
   finally { isLoading.value = false; }
 };
 
+import { useRouter } from 'vue-router'; // Ila knti khdam b vue-router
+
+const router = useRouter();
+
+const logout = async () => {
+  try {
+    // 1. Appèl l-backend bach t-invalidi l-token
+    await fetch('http://localhost:8080/api/logout', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+  } catch (e) {
+    console.error("Erreur lors du logout", e);
+  } finally {
+    // 2. 7ta ila l-backend fih chi mochkil, darouri n-ms7ou token men local
+    localStorage.removeItem('user_token');
+
+    // 3. Rejje3 l-user l-page d login (aw dir refresh)
+    window.location.href = '/login';
+    // aw router.push('/login') ila knti m-configurer l-router
+  }
+};
 const resetForms = () => {
   step.value = 'list';
   hopitalIdCree.value = null;
@@ -128,7 +153,10 @@ const resetForms = () => {
 
 <template>
   <div class="dashboard">
-    <h1>Gestion des Hôpitaux</h1>
+    <div class="header-actions">
+      <h1>Gestion des Hôpitaux</h1>
+      <button @click="logout" class="btn-logout">Se déconnecter</button>
+    </div>
 
     <div v-if="messageSuccess" class="alert success">{{ messageSuccess }} <button
         @click="messageSuccess = ''">X</button>
@@ -260,5 +288,26 @@ th {
 
 button:disabled {
   opacity: 0.5;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.btn-logout {
+  background: #95a5a6;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-logout:hover {
+  background: #7f8c8d;
 }
 </style>

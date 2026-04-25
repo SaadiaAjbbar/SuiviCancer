@@ -37,10 +37,10 @@ Route::middleware(['auth:sanctum', 'role:ADMINGLOBAL'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:ADMINHOPITAL'])->group(function () {
     // CRUD toxicites
-    Route::post('/toxicites', [ToxiciteController::class, 'store']); //ajouter toxicite
-    Route::get('/toxicites', [ToxiciteController::class, 'index']);      // Voir tout toxicite
-    Route::put('/toxicites/{id}', [ToxiciteController::class, 'update']); // Modifier toxicite
-    Route::delete('/toxicites/{id}', [ToxiciteController::class, 'destroy']); // Supprimer toxicite
+    Route::post('/hopital/toxicites', [ToxiciteController::class, 'store']); //ajouter toxicite
+    Route::get('/hopital/toxicites', [ToxiciteController::class, 'index']);      // Voir tout toxicite
+    Route::put('/hopital/toxicites/{id}', [ToxiciteController::class, 'update']); // Modifier toxicite
+    Route::delete('/hopital/toxicites/{id}', [ToxiciteController::class, 'destroy']); // Supprimer toxicite
 
     // CRUD symptomes
     Route::post('/symptomes', [SymptomeController::class, 'store']);
@@ -57,41 +57,79 @@ Route::middleware(['auth:sanctum', 'role:ADMINHOPITAL'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:INFIRMIERE'])->group(function () {
-    Route::apiResource('patients', PatientController::class);
+    // Option plus simple si apiResource te pose des soucis avec le nom du paramètre
+    Route::get('infirmiers/patients', [PatientController::class, 'index']);
+    Route::post('infirmiers/patients', [PatientController::class, 'store']);
+    Route::get('infirmiers/patients/{id}', [PatientController::class, 'show']);
+    Route::put('infirmiers/patients/{id}', [PatientController::class, 'update']);
+    Route::delete('infirmiers/patients/{id}', [PatientController::class, 'destroy']);
+    Route::get('infirmiers/medecins', [MedecinController::class, 'index']);
 });
 
 Route::middleware(['auth:sanctum', 'role:MEDECIN'])->group(function () {
+    Route::get('medecin/my-patients', [PatientController::class, 'getMedecinPatients']);
+    Route::get('medecin/toxicites', [ToxiciteController::class, 'index']);      // Voir tout toxicite
+    Route::get('medecin/symptomes', [SymptomeController::class, 'index']);
+
+
     // Route bach t-lister o t-creeyi
-    Route::get('/consultations', [ConsultationController::class, 'index']);
-    Route::post('/consultations', [ConsultationController::class, 'store']);
+    Route::get('medecin/consultations', [ConsultationController::class, 'index']);
+    Route::post('medecin/consultations', [ConsultationController::class, 'store']);
 
     // Route bach tchoufi we7da bo7dha
-    Route::get('/consultations/{id}', [ConsultationController::class, 'show']);
+    Route::get('medecin/consultations/{id}', [ConsultationController::class, 'show']);
 
     // Route dyal l-Update (PUT awla PATCH)
-    Route::put('/consultations/{id}', [ConsultationController::class, 'update']);
+    Route::put('medecin/consultations/{id}', [ConsultationController::class, 'update']);
 
     // Route dyal Delete
-    Route::delete('/consultations/{id}', [ConsultationController::class, 'destroy']);
+    Route::delete('medecin/consultations/{id}', [ConsultationController::class, 'destroy']);
 
 
-    Route::post('/etat-general', [EtatGeneralController::class, 'store']);
-    Route::get('/etat-general/consultation/{consultation_id}', [EtatGeneralController::class, 'showByConsultation']);
-    Route::put('/etat-general/{id}', [EtatGeneralController::class, 'update']);
-    Route::delete('/etat-general/{id}', [EtatGeneralController::class, 'destroy']);
+    Route::post('medecin/etat-general', [EtatGeneralController::class, 'store']);
+    Route::get('medecin/etat-general/consultation/{consultation_id}', [EtatGeneralController::class, 'showByConsultation']);
+    Route::put('medecin/etat-general/{id}', [EtatGeneralController::class, 'update']);
+    Route::delete('medecin/etat-general/{id}', [EtatGeneralController::class, 'destroy']);
 
-    Route::apiResource('questions', QuestionController::class);
+    //Route::apiResource('questions', QuestionController::class);
+    Route::get('medecin/questions', [QuestionController::class, 'index']);
+    route::post('medecin/questions', [QuestionController::class, 'store']);
+    Route::put('medecin/questions/{id}', [QuestionController::class, 'update']);
+    Route::delete('medecin/questions/{id}', [QuestionController::class, 'destroy']);
 
-    Route::apiResource('rendez-vous', RendezVousController::class);
-    Route::apiResource('traitements', TraitementController::class);
-    Route::apiResource('conseils', ConseilController::class);
+
+    Route::get('medecin/rendez-vous', [RendezVousController::class, 'index']);
+    Route::post('medecin/rendez-vous', [RendezVousController::class, 'store']);
+    Route::put('medecin/rendez-vous/{id}', [RendezVousController::class, 'update']);
+    Route::delete('medecin/rendez-vous/{id}', [RendezVousController::class, 'destroy']);
+
+    Route::get('medecin/traitements', [TraitementController::class, 'index']);
+    Route::post('medecin/traitements', [TraitementController::class, 'store']);
+    Route::put('medecin/traitements/{id}', [TraitementController::class, 'update']);
+    Route::delete('medecin/traitements/{id}', [TraitementController::class, 'destroy']);
+    // Route::apiResource('traitements', TraitementController::class);
+    Route::get('medecin/conseils', [ConseilController::class, 'index']);
+    Route::post('medecin/conseils', [ConseilController::class, 'store']);
+    Route::put('medecin/conseils/{id}', [ConseilController::class, 'update']);
+    Route::delete('medecin/conseils/{id}', [ConseilController::class, 'destroy']);
+    // Route::apiResource('conseils', ConseilController::class);
+
+    Route::get('medecin/responses', [ReponseController::class, 'getRponses']);
 });
 
 Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
     // Bach i-chouf l-as'ila
-    Route::get('/my-questions', [ReponseController::class, 'getMyQuestions']);
+    Route::get('patient/my-questions', [QuestionController::class, 'afficherQuestionsPatient']);
     // Bach i-jawb
-    Route::post('/submit-responses', [ReponseController::class, 'storeReponses']);
-});
+    Route::post('patient/submit-responses', [ReponseController::class, 'storeReponses']);
+    Route::get('patient/my-questions', [ReponseController::class, 'getMyQuestions']);
+    Route::get('patient/my-history', [ReponseController::class, 'getPatientHistory']);
 
-Route::get('/responses' , [ReponseController::class, 'getRponses'])->middleware('auth:sanctum');
+    Route::put('patient/responses/{id}', [ReponseController::class, 'updateReponses']);
+    Route::delete('patient/responses/{id}', [ReponseController::class, 'destroyReponse']);
+    Route::get('patient/my-rendez-vous', [RendezVousController::class, 'getPatientRDV']);
+    Route::get('patient/my-traitements', [TraitementController::class, 'getPatientTraitements']);
+    Route::get('patient/my-conseils', [ConseilController::class, 'getPatientConseils']);
+    Route::get('patient/my-bilans', [EtatGeneralController::class, 'getPatientBilans']);
+    Route::get('patient/my-consultations', [ConsultationController::class, 'getPatientConsultations']);
+});

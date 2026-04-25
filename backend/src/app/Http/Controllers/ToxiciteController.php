@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Toxicite;
 use App\Models\AdminHopital;
+use App\Models\Medecin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -91,14 +92,34 @@ class ToxiciteController extends Controller
     }
 
     // 3. Afficher la liste des toxicités de l'hôpital (Index)
+
     public function index()
     {
-        $adminHopital = Auth::user()->adminHopital;
+        $user = Auth::user();
 
-        $toxicites = Toxicite::where('hopital_id', $adminHopital->hopital_id)
-            ->with('symptomes') // Kat'jibhom m3aha f deqqa we7da
-            ->get();
+        if ($user->role == "ADMINHOPITAL") {
+            // Hna khass t-checki wach la relation adminHopital kayna f User model
+            $adminInfo = \App\Models\AdminHopital::where('user_id', $user->id)->first();
+            if (!$adminInfo) return response()->json([], 403);
 
-        return response()->json($toxicites);
+            $toxicites = Toxicite::where('hopital_id', $adminInfo->hopital_id)
+                ->with('symptomes')->get();
+            return response()->json($toxicites);
+        } else if ($user->role == "MEDECIN") {
+            // Ahmed m-logui: khassna njbdou hopital_id men la table medecins
+            $medecin = Medecin::where('user_id', $user->id)->first();
+
+            if (!$medecin) {
+                return response()->json(['message' => 'Medecin introuvable'], 404);
+            }
+
+            $toxicites = Toxicite::where('hopital_id', $medecin->hopital_id)
+                ->with('symptomes')
+                ->get();
+
+            return response()->json($toxicites);
+        }
+
+        return response()->json([], 200);
     }
 }

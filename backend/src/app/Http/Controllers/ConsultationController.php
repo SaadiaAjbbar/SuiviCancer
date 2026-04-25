@@ -62,6 +62,43 @@ class ConsultationController extends Controller
         });
     }
 
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $medecin = Medecin::where('user_id', $user->id)->first();
+
+        if (!$medecin) {
+            return response()->json(['message' => 'Profil médecin introuvable'], 404);
+        }
+
+        $consultation = Consultation::where('id', $id)
+            ->where('medecin_id', $medecin->id)
+            ->first();
+
+        if (!$consultation) {
+            return response()->json(['message' => 'Consultation introuvable'], 404);
+        }
+
+        try {
+            return DB::transaction(function () use ($consultation) {
+                // 1. N-m7iw l-3alaqat f les tables pivot (Détachage)
+                // Had l-khoutwa darouriya bach Database mat-bloquich
+                $consultation->symptomes()->detach();
+                $consultation->toxicites()->detach();
+
+                // 2. N-m7iw l-consultation daba mnin wellat "bo7dha"
+                $consultation->delete();
+
+                return response()->json(['message' => 'Consultation supprimée avec succès']);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function update(Request $request, $id)
     {
         $user = Auth::user();
@@ -119,7 +156,34 @@ class ConsultationController extends Controller
         }
         // Afficher ghir les consultations dyal had l-medecin
         $consultations = Consultation::where('medecin_id', $medecin->id)
-            ->with(['patient.user', 'toxicites', 'symptomes'])
+            ->with(['patient.user', 'toxicites', 'symptomes', 'etatGeneral']) // Zid 'etatGeneral' hna
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json($consultations);
+    }
+
+    public function getPatientConsultations()
+    {
+        $user = Auth::user();
+        $patient = $user->patient;
+
+        if (!$patient) {
+            return response()->json(['message' => 'Profil patient non trouvé'], 404);
+        }
+
+        // On récupère les consultations avec les symptômes, toxicités
+        // ET l'état général (qui contient les décisions : traitement, rdv, conseil)
+        $consultations = Consultation::where('patient_id', $patient->id)
+            ->with([
+                'medecin.user',
+                'toxicites',
+                'symptomes',
+                'etatGeneral.traitement',
+                'etatGeneral.rendezVous',
+                'etatGeneral.conseil'
+            ])
+            ->orderBy('date', 'desc')
             ->get();
 
         return response()->json($consultations);

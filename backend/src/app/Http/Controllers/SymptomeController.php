@@ -109,4 +109,29 @@ class SymptomeController extends Controller
 
         return response()->json($symptome);
     }
+
+    public function index()
+    {
+        $user = Auth::user();
+        $hopital_id = null;
+
+        if ($user->role == "ADMINHOPITAL") {
+            $adminInfo = \App\Models\AdminHopital::where('user_id', $user->id)->first();
+            $hopital_id = $adminInfo?->hopital_id;
+        } else if ($user->role == "MEDECIN") {
+            $medecin = \App\Models\Medecin::where('user_id', $user->id)->first();
+            $hopital_id = $medecin?->hopital_id;
+        }
+
+        if (!$hopital_id) {
+            return response()->json(['message' => 'Accès non autorisé ou hôpital non trouvé'], 403);
+        }
+
+        // Njibou ga3 l-symptomes li l-toxicité dyalhom taba3a l-had l-hopital
+        $symptomes = Symptome::whereHas('toxicite', function ($query) use ($hopital_id) {
+            $query->where('hopital_id', $hopital_id);
+        })->with('toxicite')->get();
+
+        return response()->json($symptomes);
+    }
 }
