@@ -12,7 +12,7 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-       // return response()->json(password_hash('admin', PASSWORD_DEFAULT));
+       //return response()->json(password_hash('admin', PASSWORD_DEFAULT));
         // 1. Validation des données
 
         $fields = $request->validate([
