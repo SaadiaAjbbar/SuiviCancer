@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class MedecinController extends Controller
 {
+    
     public function index()
     {
         $user = Auth::user();
