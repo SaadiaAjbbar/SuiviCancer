@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Auth;
 
 class PatientController extends Controller
 {
-    /**
-     * Helper pour récupérer les infos pro (Infirmier ou Medecin) de l'utilisateur connecté
-     */
+
     private function getProInfo($user)
     {
         if ($user->role === 'INFIRMIERE') {
@@ -41,7 +39,7 @@ class PatientController extends Controller
         ]);
 
         $userLogui = Auth::user();
-        // Seule l'infirmière crée le patient selon ton api.php
+
         $proInfo = $this->getProInfo($userLogui);
 
         if (!$proInfo) {
@@ -64,7 +62,7 @@ class PatientController extends Controller
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'email' => $request->email,
-                'mot_de_passe' => Hash::make($request->password), // Vérifie que c'est 'mot_de_passe' ou 'password' dans ton model
+                'mot_de_passe' => Hash::make($request->password), 
                 'role' => 'PATIENT',
             ]);
 
@@ -112,9 +110,9 @@ class PatientController extends Controller
             return response()->json(['message' => 'Accès réservé aux médecins'], 403);
         }
 
-        // Njibo ghir les patients li 3ndhom id_medecin dyal had l-proInfo
+
         $patients = Patient::where('medecin_id', $proInfo->id)
-            ->with(['user']) // Kan-loadiv ghir l-user hit l-medecin rah 3arfinah chkon
+            ->with(['user'])
             ->get();
 
         return response()->json($patients);
@@ -156,7 +154,6 @@ class PatientController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $patient) {
-            // Mise à jour de l'User lié
             if ($request->hasAny(['nom', 'prenom', 'email'])) {
                 $patient->user->update($request->only(['nom', 'prenom', 'email']));
             }
@@ -187,7 +184,7 @@ class PatientController extends Controller
             ->where('hopital_id', $proInfo->hopital_id)
             ->firstOrFail();
 
-        // Supprimer l'utilisateur (le patient suivra via le onDelete cascade ou manuellement)
+
         $patient->user->delete();
 
         return response()->json(['message' => 'Patient supprimé avec succès']);
