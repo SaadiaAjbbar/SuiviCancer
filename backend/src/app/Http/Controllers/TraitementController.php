@@ -14,7 +14,6 @@ class TraitementController extends Controller
     {
         $medecin = Auth::user()->medecin;
 
-        // Njibou les traitements dyal les patients dyal had t-tbib
         $traitements = Traitement::whereHas('patient', function ($query) use ($medecin) {
             $query->where('medecin_id', $medecin->id);
         })->with('patient.user', 'etatGeneral')->get();
@@ -40,8 +39,6 @@ class TraitementController extends Controller
             return response()->json(['message' => 'État général invalide, ni consultation ni réponse associée'], 400);
         }
 
-        // Logic bach n-jbdou patient_id automatique
-        // $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponse->patients_id;
 
         $traitement = Traitement::create([
             'nom' => $request->nom,
@@ -89,15 +86,12 @@ class TraitementController extends Controller
 {
     $user = Auth::user();
 
-    // Checki wach l-user 3ndo profil patient
     if (!$user->patient) {
         return response()->json(['message' => 'Profil patient non trouvé'], 404);
     }
 
     $patient_id = $user->patient->id;
 
-    // Hna ghadi njibu ay traitement fih l-id dyal had l-patient
-    // Bla ma n-diro whereHas, ghir direct where 3la l-column
     $traitements = Traitement::where('patient_id', $patient_id)
         ->with([
             'etatGeneral.consultation.medecin.user',
