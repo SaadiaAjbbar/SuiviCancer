@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\DB;
 
 class MedecinController extends Controller
 {
-    
+
     public function index()
     {
         $user = Auth::user();
         if ($user->role == "ADMINHOPITAL") {
-            $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+            $adminHopital = $user->adminHopital;
 
 
             $medecins = Medecin::where('hopital_id', $adminHopital->hopital_id)
@@ -25,7 +25,7 @@ class MedecinController extends Controller
                 ->get();
             return response()->json($medecins);
         }else if($user->role == "INFIRMIERE"){
-             $infermier = $user->infermier; // Khass t'koun derti la relation f User.php
+             $infermier = $user->infermier;
 
 
             $medecins = Medecin::where('hopital_id', $infermier->hopital_id)
@@ -46,7 +46,7 @@ class MedecinController extends Controller
         ]);
 
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+        $adminHopital = $user->adminHopital;
 
 
         return DB::transaction(function () use ($request, $adminHopital) {
@@ -71,7 +71,7 @@ class MedecinController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+        $adminHopital = $user->adminHopital;
 
         $medecin = Medecin::where('id', $id)->where('hopital_id', $adminHopital->hopital_id)->firstOrFail();
 
@@ -88,7 +88,7 @@ class MedecinController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+        $adminHopital = $user->adminHopital;
 
         $medecin = Medecin::where('id', $id)->where('hopital_id', $adminHopital->hopital_id)->firstOrFail();
 
