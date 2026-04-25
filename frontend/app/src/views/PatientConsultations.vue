@@ -1,69 +1,6 @@
-<template>
-  <div class="consultation-page">
-    <header class="page-header">
-      <h2>🏥 Mon Historique Médical</h2>
-      <p>Retrouvez le détail de vos visites et les décisions prises par votre médecin.</p>
-    </header>
-
-    <div v-if="isLoading" class="loading">Chargement de votre dossier...</div>
-
-    <div v-else-if="consultations.length > 0" class="consultation-list">
-      <div v-for="c in consultations" :key="c.id" class="consultation-card">
-
-        <div class="card-side">
-          <div class="date-box">
-            <span class="day">{{ getDay(c.date) }}</span>
-            <span class="month">{{ getMonth(c.date) }}</span>
-          </div>
-          <span :class="['gravite-badge', c.gravite.toLowerCase()]">{{ c.gravite }}</span>
-        </div>
-
-        <div class="card-main">
-          <div class="card-header">
-            <h3>Consultation avec Dr. {{ c.medecin?.user?.nom }}</h3>
-          </div>
-
-          <div class="medical-tags">
-            <span v-for="s in c.symptomes" :key="s.id" class="tag symptome">🩹 {{ s.nom }}</span>
-            <span v-for="t in c.toxicites" :key="t.id" class="tag toxicite">⚠️ {{ t.nom }}</span>
-          </div>
-
-          <hr class="divider" />
-
-          <div class="decisions-section" v-if="c.etat_general">
-            <h4>📋 Décisions & État Général</h4>
-            <p class="eg-desc">{{ c.etat_general.description }}</p>
-
-            <div class="decision-badges">
-              <div v-if="c.etat_general.traitement?.length" class="decision-item">
-                <span class="icon">💊</span> <strong>Traitement :</strong> {{ c.etat_general.traitement.length }}
-                prescrit(s)
-              </div>
-              <div v-if="c.etat_general.rendez_vous?.length" class="decision-item">
-                <span class="icon">📅</span> <strong>Prochain RDV :</strong> Prévu
-              </div>
-              <div v-if="c.etat_general.conseil?.length" class="decision-item">
-                <span class="icon">💡</span> <strong>Conseils :</strong> Inclus
-              </div>
-            </div>
-          </div>
-          <div v-else class="no-eg">
-            <p>En attente du compte-rendu détaillé du médecin.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <span class="icon">🏥</span>
-      <h3>Aucune consultation</h3>
-      <p>Votre historique de consultations apparaîtra ici.</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
 
 const consultations = ref([]);
 const isLoading = ref(true);
@@ -88,152 +25,92 @@ const getMonth = (d) => new Date(d).toLocaleDateString('fr-FR', { month: 'short'
 onMounted(fetchConsultations);
 </script>
 
-<style scoped>
-.consultation-page {
-  max-width: 900px;
-  margin: 0 auto;
-}
+<template>
+  <div class="space-y-10 animate-in fade-in duration-500">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Mon Historique Médical</h1>
+      <p class="text-slate-500 font-medium">Retrouvez le détail de vos visites et les décisions prises par votre équipe médicale.</p>
+    </div>
 
-.page-header {
-  margin-bottom: 30px;
-}
+    <div v-if="isLoading" class="py-20 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-500 font-bold">Chargement de votre dossier...</p>
+    </div>
 
-.consultation-list {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
+    <div v-else-if="consultations.length > 0" class="space-y-8">
+      <div v-for="c in consultations" :key="c.id" class="flex flex-col lg:flex-row bg-white rounded-3xl overflow-hidden border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500">
+        <!-- Sidebar with Date -->
+        <div class="lg:w-40 bg-slate-50 p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">
+          <div class="text-center mb-4">
+            <span class="block text-4xl font-black text-slate-900 leading-none">{{ getDay(c.date) }}</span>
+            <span class="block text-xs font-black text-primary uppercase tracking-widest mt-2">{{ getMonth(c.date) }}</span>
+          </div>
+          <span 
+            class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+            :class="c.gravite?.toLowerCase() === 'urgente' || c.gravite?.toLowerCase() === 'sévère' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'"
+          >
+            {{ c.gravite || 'Normal' }}
+          </span>
+        </div>
 
-.consultation-card {
-  display: flex;
-  background: white;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  border: 1px solid #eef2f7;
-}
+        <!-- Main Content -->
+        <div class="flex-1 p-8 sm:p-10">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Consultation avec Dr. {{ c.medecin?.user?.nom }}</h3>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="s in c.symptomes" :key="s.id" class="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-full">
+                🩹 {{ s.nom }}
+              </span>
+              <span v-for="t in c.toxicites" :key="t.id" class="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100">
+                ⚠️ {{ t.nom }}
+              </span>
+            </div>
+          </div>
 
-.card-side {
-  background: #f8fafc;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 100px;
-  border-right: 1px solid #eef2f7;
-}
+          <div v-if="c.etat_general" class="space-y-6">
+            <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
+              <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 bg-primary rounded-full"></span> Observations du médecin
+              </h4>
+              <p class="text-slate-700 leading-relaxed font-medium italic">"{{ c.etat_general.description }}"</p>
+            </div>
 
-.date-box {
-  text-align: center;
-  margin-bottom: 15px;
-}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div v-if="c.etat_general.traitement?.length" class="flex items-center gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                <span class="text-2xl">💊</span>
+                <div>
+                  <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest">Traitement</p>
+                  <p class="text-xs font-bold text-blue-700">{{ c.etat_general.traitement.length }} prescrit(s)</p>
+                </div>
+              </div>
+              <div v-if="c.etat_general.rendez_vous?.length" class="flex items-center gap-3 p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                <span class="text-2xl">📅</span>
+                <div>
+                  <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Prochain RDV</p>
+                  <p class="text-xs font-bold text-emerald-700">Programmé</p>
+                </div>
+              </div>
+              <div v-if="c.etat_general.conseil?.length" class="flex items-center gap-3 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
+                <span class="text-2xl">💡</span>
+                <div>
+                  <p class="text-[10px] font-black text-amber-400 uppercase tracking-widest">Conseils</p>
+                  <p class="text-xs font-bold text-amber-700">Disponibles</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="py-10 text-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+            <p class="text-slate-400 font-bold italic">En attente du compte-rendu détaillé du médecin...</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-.day {
-  display: block;
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #2c3e50;
-}
-
-.month {
-  font-size: 0.9rem;
-  color: #3498db;
-  font-weight: bold;
-}
-
-.gravite-badge {
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.gravite-badge.normale {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.gravite-badge.urgente {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.card-main {
-  flex: 1;
-  padding: 25px;
-}
-
-.card-header h3 {
-  margin: 0 0 15px 0;
-  color: #1e293b;
-}
-
-.medical-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.tag {
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.tag.symptome {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.tag.toxicite {
-  background: #fff7ed;
-  color: #9a3412;
-  border: 1px solid #ffedd5;
-}
-
-.divider {
-  border: 0;
-  border-top: 1px solid #f1f5f9;
-  margin: 20px 0;
-}
-
-.decisions-section h4 {
-  margin: 0 0 10px 0;
-  font-size: 1rem;
-  color: #334155;
-}
-
-.eg-desc {
-  color: #64748b;
-  font-style: italic;
-  margin-bottom: 15px;
-}
-
-.decision-badges {
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.decision-item {
-  font-size: 0.85rem;
-  background: #f0f7ff;
-  padding: 8px 12px;
-  border-radius: 10px;
-  color: #1e40af;
-}
-
-.no-eg {
-  color: #94a3b8;
-  font-size: 0.9rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px;
-  color: #94a3b8;
-}
-</style>
+    <div v-else class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+      <div class="text-7xl mb-6">🏥</div>
+      <h3 class="text-2xl font-black text-slate-900">Aucune consultation</h3>
+      <p class="text-slate-500 font-medium max-w-md mx-auto mt-2">Votre historique de consultations apparaîtra ici après votre première visite.</p>
+    </div>
+  </div>
+</template>
