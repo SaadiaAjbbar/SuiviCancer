@@ -1,55 +1,6 @@
-<template>
-  <div class="treatment-page">
-    <header class="page-header">
-      <h2>💊 Mes Traitements</h2>
-      <p>Retrouvez ici les médicaments et soins prescrits par votre médecin.</p>
-    </header>
-
-    <div v-if="isLoading" class="loading">Chargement de vos traitements...</div>
-
-    <div v-else-if="traitements.length > 0" class="treatment-list">
-      <div v-for="t in traitements" :key="t.id" class="treatment-card">
-        <div class="treatment-icon">💊</div>
-
-        <div class="treatment-content">
-          <div class="treatment-header">
-            <h3>{{ t.nom }}</h3>
-            <span class="prescribed-date">Prescrit le : {{ formatDate(t.created_at) }}</span>
-          </div>
-
-          <div class="treatment-description">
-            <strong>Instructions :</strong>
-            <p>{{ t.description }}</p>
-          </div>
-
-          <div class="treatment-footer">
-            <span class="doctor-badge" v-if="t.etat_general">
-              👨‍⚕️
-              <template v-if="t.etat_general.consultation?.medecin">
-                Dr. {{ t.etat_general.consultation.medecin.user.nom }}
-              </template>
-              <template v-else-if="t.etat_general.reponse?.patient?.medecin">
-                Dr. {{ t.etat_general.reponse.patient.medecin.user.nom }}
-              </template>
-              <template v-else>
-                Médecin partenaire
-              </template>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <span class="icon">💊</span>
-      <h3>Aucun traitement</h3>
-      <p>Vous n'avez pas de traitement actif pour le moment.</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
 
 const traitements = ref([]);
 const isLoading = ref(true);
@@ -82,109 +33,74 @@ const formatDate = (dateStr) => {
 onMounted(fetchTraitements);
 </script>
 
-<style scoped>
-.treatment-page {
-  max-width: 900px;
-  margin: 0 auto;
-}
+<template>
+  <div class="space-y-10 animate-in fade-in duration-500">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Mes Traitements</h1>
+      <p class="text-slate-500 font-medium">Retrouvez ici les médicaments et soins prescrits par votre médecin.</p>
+    </div>
 
-.page-header {
-  margin-bottom: 30px;
-}
+    <div v-if="isLoading" class="py-20 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-500 font-bold">Chargement de vos traitements...</p>
+    </div>
 
-.page-header h2 {
-  color: #2c3e50;
-  font-size: 1.8rem;
-}
+    <div v-else-if="traitements.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <AppCard 
+        v-for="t in traitements" 
+        :key="t.id" 
+        padding="false"
+        class="group flex flex-col hover:border-primary/20 transition-all duration-300"
+      >
+        <div class="p-6 border-b border-slate-50 bg-slate-50/30">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-blue-50 text-blue-600 flex items-center justify-center rounded-2xl text-2xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                💊
+              </div>
+              <div>
+                <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">{{ t.nom }}</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Prescrit le : {{ formatDate(t.created_at) }}</p>
+              </div>
+            </div>
+            <div class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+              Actif
+            </div>
+          </div>
+        </div>
 
-.treatment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+        <div class="p-6 flex-1">
+          <div class="space-y-3">
+            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Instructions Médicales</h4>
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p class="text-slate-700 leading-relaxed font-medium italic">"{{ t.description }}"</p>
+            </div>
+          </div>
+        </div>
 
-.treatment-card {
-  background: white;
-  border-radius: 15px;
-  padding: 20px;
-  display: flex;
-  gap: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border-left: 6px solid #3498db;
-  transition: transform 0.2s;
-}
+        <div class="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+           <div class="flex items-center gap-2">
+             <span class="text-xs font-black text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+               <template v-if="t.etat_general?.consultation?.medecin">
+                 Dr. {{ t.etat_general.consultation.medecin.user.nom }}
+               </template>
+               <template v-else-if="t.etat_general?.reponse?.patient?.medecin">
+                 Dr. {{ t.etat_general.reponse.patient.medecin.user.nom }}
+               </template>
+               <template v-else>
+                 Médecin partenaire
+               </template>
+             </span>
+           </div>
+           <button class="text-[10px] font-black text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Voir ordonnance</button>
+        </div>
+      </AppCard>
+    </div>
 
-.treatment-card:hover {
-  transform: scale(1.01);
-}
-
-.treatment-icon {
-  font-size: 2rem;
-  background: #ebf5ff;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-}
-
-.treatment-content {
-  flex: 1;
-}
-
-.treatment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.treatment-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 1.3rem;
-  text-transform: capitalize;
-}
-
-.prescribed-date {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.treatment-description {
-  background: #f8fafc;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-}
-
-.treatment-description p {
-  margin: 5px 0 0;
-  color: #475569;
-  line-height: 1.5;
-}
-
-.doctor-badge {
-  font-size: 0.85rem;
-  color: #3498db;
-  font-weight: 600;
-  background: #e1effe;
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px;
-  background: white;
-  border-radius: 20px;
-  color: #94a3b8;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #3498db;
-}
-</style>
+    <div v-else class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+      <div class="text-7xl mb-6">💊</div>
+      <h3 class="text-2xl font-black text-slate-900">Aucun traitement</h3>
+      <p class="text-slate-500 font-medium max-w-md mx-auto mt-2">Vous n'avez pas de traitement actif pour le moment. Suivez bien les conseils de votre médecin.</p>
+    </div>
+  </div>
+</template>
