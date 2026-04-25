@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 
 class RendezVousController extends Controller
 {
-    // 1. Lister les RDV dyal les patients dyal had t-tbib
     public function index()
     {
         $medecin = Auth::user()->medecin;
@@ -23,7 +22,6 @@ class RendezVousController extends Controller
         return response()->json($rdvs);
     }
 
-    // 2. Créer un RDV basé sur un Etat General
     public function store(Request $request)
     {
         $request->validate([
@@ -46,7 +44,6 @@ class RendezVousController extends Controller
                 return response()->json(['message' => 'État général doit être lié à une consultation ou une réponse'], 400);
             }
 
-        // Logic bach n-jbdou patient_id automatique
 
         $rdv = RendezVous::create([
             'date' => $request->date,
@@ -84,9 +81,8 @@ class RendezVousController extends Controller
             return response()->json(['message' => 'Profil patient non trouvé'], 404);
         }
 
-        // On récupère les RDV avec les infos du médecin (via l'EtatGeneral ou directement selon ta structure)
         $rdvs = RendezVous::where('patient_id', $patient->id)
-            ->with(['etatGeneral.consultation.medecin.user']) // Pour savoir quel médecin a fixé le RDV
+            ->with(['etatGeneral.consultation.medecin.user']) 
             ->orderBy('date', 'asc')
             ->get();
 
