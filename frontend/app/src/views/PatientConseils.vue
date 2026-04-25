@@ -1,61 +1,6 @@
-<template>
-  <div class="advice-page">
-    <header class="page-header">
-      <div class="header-content">
-        <h2>💡 Mes Conseils & Suivi</h2>
-        <p>Retrouvez ici les recommandations et les réponses de vos médecins.</p>
-      </div>
-    </header>
-
-    <div v-if="isLoading" class="loading-container">
-      <div class="spinner"></div>
-      <p>Chargement de vos données médicales...</p>
-    </div>
-
-    <div v-else-if="conseils.length > 0" class="advice-grid">
-      <div v-for="c in conseils" :key="c.id" class="advice-card">
-        <div class="advice-content">
-          <div class="advice-header">
-            <span class="category-tag">Conseil Médical</span>
-            <span class="advice-date">{{ formatDate(c.created_at) }}</span>
-          </div>
-
-          <div class="advice-body">
-            <p>{{ c.description }}</p>
-          </div>
-
-          <div v-if="c.etatGeneral?.reponses && c.etatGeneral.reponses.length > 0" class="responses-box">
-            <h4 class="responses-title">💬 Réponses du médecin :</h4>
-            <div v-for="rep in c.etatGeneral.reponses" :key="rep.id" class="response-item">
-              <p class="response-text">{{ rep.message }}</p>
-              <div class="response-meta" v-if="rep.medecin?.user">
-                <span>Par Dr. {{ rep.medecin.user.nom }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="advice-footer" v-if="c.etatGeneral?.consultation?.medecin?.user">
-            <div class="doc-badge">
-              <span class="icon">👨‍⚕️</span>
-              <span class="doc-info">
-                Dr. {{ c.etatGeneral.consultation.medecin.user.nom }} (Consultation)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <div class="empty-icon">📂</div>
-      <h3>Aucun conseil disponible</h3>
-      <p>Vous n'avez pas encore reçu de recommandations de la part de vos médecins.</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
 
 const conseils = ref([]);
 const isLoading = ref(true);
@@ -73,11 +18,7 @@ const fetchConseils = async () => {
     });
 
     if (res.ok) {
-      const data = await res.json();
-      console.log("Données reçues du Backend:", data);
-      conseils.value = data;
-    } else {
-      console.error("Erreur lors de la récupération");
+      conseils.value = await res.json();
     }
   } catch (e) {
     console.error("Erreur Connexion API:", e);
@@ -98,158 +39,79 @@ const formatDate = (dateStr) => {
 onMounted(fetchConseils);
 </script>
 
-<style scoped>
-.advice-page {
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 0 20px;
-  font-family: 'Inter', sans-serif;
-}
+<template>
+  <div class="space-y-10 animate-in fade-in duration-500">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Conseils & Suivi</h1>
+      <p class="text-slate-500 font-medium">Retrouvez ici les recommandations personnalisées de votre équipe médicale.</p>
+    </div>
 
-.page-header {
-  margin-bottom: 40px;
-  border-left: 5px solid #f1c40f;
-  padding-left: 20px;
-}
+    <div v-if="isLoading" class="py-20 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-500 font-bold">Chargement de vos recommandations...</p>
+    </div>
 
-.page-header h2 {
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0;
-}
+    <div v-else-if="conseils.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <AppCard 
+        v-for="c in conseils" 
+        :key="c.id" 
+        padding="false"
+        class="group flex flex-col border-amber-100/50 hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300"
+      >
+        <div class="p-6 border-b border-amber-50 bg-amber-50/20">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-full">
+              Conseil Médical
+            </span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {{ formatDate(c.created_at) }}
+            </span>
+          </div>
+        </div>
 
-.page-header p {
-  color: #64748b;
-  margin-top: 5px;
-}
+        <div class="p-8 flex-1 space-y-8">
+          <div class="relative">
+            <span class="absolute -top-4 -left-4 text-4xl text-amber-100 font-serif opacity-50">"</span>
+            <p class="text-xl font-bold text-slate-800 leading-relaxed pl-2 relative z-10">
+              {{ c.description }}
+            </p>
+            <span class="absolute -bottom-4 right-0 text-4xl text-amber-100 font-serif opacity-50">"</span>
+          </div>
 
-.advice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 25px;
-}
+          <!-- Doctor Responses Section -->
+          <div v-if="c.etatGeneral?.reponses?.length > 0" class="space-y-4">
+            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+               <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Réponses du médecin
+            </h4>
+            <div class="space-y-3">
+              <div v-for="rep in c.etatGeneral.reponses" :key="rep.id" class="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                <p class="text-sm font-semibold text-emerald-900 leading-relaxed">{{ rep.message }}</p>
+                <p class="text-[10px] font-bold text-emerald-600 mt-2 italic" v-if="rep.medecin?.user">
+                  — Dr. {{ rep.medecin.user.nom }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-.advice-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 25px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.2s ease;
-}
+        <div class="p-6 bg-slate-50 border-t border-slate-100">
+          <div v-if="c.etatGeneral?.consultation?.medecin?.user" class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-xs">👨‍⚕️</div>
+            <span class="text-xs font-bold text-slate-500">
+              Prescrit par <span class="text-slate-900">Dr. {{ c.etatGeneral.consultation.medecin.user.nom }}</span>
+            </span>
+          </div>
+          <div v-else class="text-xs font-bold text-slate-400 italic">
+            Recommandation générale
+          </div>
+        </div>
+      </AppCard>
+    </div>
 
-.advice-card:hover {
-  transform: translateY(-5px);
-}
-
-.advice-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.category-tag {
-  background: #fef9c3;
-  color: #854d0e;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.advice-date {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.advice-body p {
-  font-size: 1.1rem;
-  color: #334155;
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-
-/* Section Réponses style Post-it ou Alert */
-.responses-box {
-  background: #f0fdf4;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 20px;
-  border-left: 4px solid #22c55e;
-}
-
-.responses-title {
-  font-size: 0.9rem;
-  color: #166534;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.response-item {
-  border-bottom: 1px solid #dcfce7;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-}
-
-.response-item:last-child {
-  border-bottom: none;
-}
-
-.response-text {
-  font-size: 0.95rem;
-  color: #14532d;
-  margin: 0;
-}
-
-.response-meta {
-  font-size: 0.8rem;
-  color: #15803d;
-  font-style: italic;
-  margin-top: 4px;
-}
-
-.advice-footer {
-  margin-top: auto;
-  padding-top: 15px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.doc-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.doc-info {
-  font-size: 0.85rem;
-  color: #475569;
-  font-weight: 500;
-}
-
-.loading-container, .empty-state {
-  text-align: center;
-  padding: 100px 20px;
-  background: white;
-  border-radius: 20px;
-  color: #64748b;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f1f5f9;
-  border-top: 4px solid #f1c40f;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-@media (max-width: 640px) {
-  .advice-grid { grid-template-columns: 1fr; }
-}
-</style>
+    <div v-else class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+      <div class="text-7xl mb-6">💡</div>
+      <h3 class="text-2xl font-black text-slate-900">Aucun conseil</h3>
+      <p class="text-slate-500 font-medium max-w-md mx-auto mt-2">Vous n'avez pas encore reçu de recommandations personnalisées.</p>
+    </div>
+  </div>
+</template>
