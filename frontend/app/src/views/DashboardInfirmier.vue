@@ -1,20 +1,23 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import AppCard from '@/components/ui/AppCard.vue';
+import AppButton from '@/components/ui/AppButton.vue';
+import AppInput from '@/components/ui/AppInput.vue';
+import BaseIcon from '@/components/ui/BaseIcon.vue';
 
 const router = useRouter();
 const token = localStorage.getItem('user_token');
 
-// États
 const currentTab = ref('patients');
 const listPatients = ref([]);
 const medecinsDisponibles = ref([]);
 const message = ref('');
+const errorMessage = ref('');
 const isLoading = ref(false);
 const isEditing = ref(false);
 const editingId = ref(null);
 
-// Formulaire
 const formPatient = ref({
   nom: '',
   prenom: '',
@@ -27,8 +30,6 @@ const formPatient = ref({
   medecin_id: ''
 });
 
-// --- CHARGEMENT DES DONNÉES ---
-
 const fetchPatients = async () => {
   try {
     const response = await fetch('http://localhost:8080/api/infirmiers/patients', {
@@ -36,25 +37,18 @@ const fetchPatients = async () => {
     });
     const data = await response.json();
     listPatients.value = Array.isArray(data) ? data : (data.liste || []);
-  } catch (e) {
-    console.error("Erreur patients", e);
-  }
+  } catch (e) { console.error(e); }
 };
 
 const fetchMedecinsMemeHopital = async () => {
   try {
     const response = await fetch('http://localhost:8080/api/infirmiers/medecins', {
-      headers: { 'Authorization': `Bearer ${token}`,
-       'Accept': 'application/json' }
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const data = await response.json();
     medecinsDisponibles.value = Array.isArray(data) ? data : (data.liste || []);
-  } catch (e) {
-    console.error("Erreur médecins", e);
-  }
+  } catch (e) { console.error(e); }
 };
-
-// --- ACTIONS ---
 
 const handleLogout = async () => {
   try {
@@ -62,17 +56,15 @@ const handleLogout = async () => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
-  } catch (e) {
-    console.error("Erreur déconnexion", e);
-  } finally {
-    localStorage.removeItem('user_token');
-    localStorage.removeItem('user_role');
+  } catch (e) { console.error(e); } finally {
+    localStorage.clear();
     router.push('/login');
   }
 };
 
-// Soumission du formulaire (Ajout ou Modification)
 const enregistrerPatient = async () => {
+  errorMessage.value = '';
+
   if (!formPatient.value.medecin_id) {
     alert("Veuillez sélectionner un médecin référent.");
     return;
@@ -86,29 +78,45 @@ const enregistrerPatient = async () => {
   const method = isEditing.value ? 'PUT' : 'POST';
 
   try {
+    const payload = {
+      ...formPatient.value,
+      medecin_id: formPatient.value.medecin_id ? Number(formPatient.value.medecin_id) : null
+    };
+
     const response = await fetch(url, {
-      method: method,
+      method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
       },
-      body: JSON.stringify(formPatient.value)
+      body: JSON.stringify(payload)
     });
 
+    const responseData = await response.json().catch(() => ({}));
+
     if (response.ok) {
-      message.value = isEditing.value ? "Patient mis à jour avec succès !" : "Patient enregistré avec succès !";
+      message.value = isEditing.value ? "✅ Patient mis à jour !" : "✅ Admission réussie !";
       resetFormulaire();
       fetchPatients();
-      // Effacer le message après 3 secondes
       setTimeout(() => message.value = '', 3000);
-    } else {
-      const errorData = await response.json();
-      alert("Erreur: " + (errorData.message || "Action impossible"));
+      return;
     }
-  } catch (e) {
-    console.error(e);
-  } finally {
+
+    if (response.status === 422) {
+      if (responseData?.errors) {
+        const firstError = Object.values(responseData.errors)
+          .flat()
+          .find(Boolean);
+        errorMessage.value = firstError || "Données invalides. Vérifiez les champs saisis.";
+      } else {
+        errorMessage.value = responseData?.message || "Données invalides. Vérifiez les champs saisis.";
+      }
+      return;
+    }
+
+    errorMessage.value = responseData?.message || "Une erreur est survenue lors de l'enregistrement du patient.";
+  } catch (e) { console.error(e); } finally {
     isLoading.value = false;
   }
 };
@@ -116,47 +124,39 @@ const enregistrerPatient = async () => {
 const preparerModification = (patient) => {
   isEditing.value = true;
   editingId.value = patient.id;
-
   formPatient.value = {
     nom: patient.user.nom,
     prenom: patient.user.prenom,
     email: patient.user.email,
-    password: '', // On ne remplit pas le password par sécurité
+    password: '',
     date_naissance: patient.date_naissance,
     sexe: patient.sexe,
     telephone: patient.telephone,
     adresse: patient.adresse || '',
     medecin_id: patient.medecin_id
   };
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 const supprimerPatient = async (id) => {
-  if (!confirm("Voulez-vous vraiment supprimer ce patient ? Cette action est irréversible.")) return;
-
+  if (!confirm("Voulez-vous vraiment supprimer ce patient ?")) return;
   try {
     const response = await fetch(`http://localhost:8080/api/infirmiers/patients/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
-
     if (response.ok) {
-      message.value = "Patient supprimé.";
+      message.value = "🗑️ Patient supprimé";
       fetchPatients();
       setTimeout(() => message.value = '', 3000);
     }
-  } catch (e) {
-    console.error("Erreur suppression", e);
-  }
+  } catch (e) { console.error(e); }
 };
 
 const resetFormulaire = () => {
   isEditing.value = false;
   editingId.value = null;
+  errorMessage.value = '';
   formPatient.value = {
     nom: '', prenom: '', email: '', password: '',
     date_naissance: '', sexe: 'M', telephone: '', adresse: '', medecin_id: ''
@@ -170,324 +170,195 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="infirmier-container">
-    <nav class="navbar">
-      <div class="logo">E-Sante | Espace Infirmier</div>
-      <ul class="nav-links">
-        <li @click="currentTab = 'patients'" :class="{ active: currentTab === 'patients' }">Gestion Patients</li>
-      </ul>
-      <button class="btn-logout" @click="handleLogout">Déconnexion</button>
-    </nav>
-
-    <div class="content">
-      <transition name="fade">
-        <div v-if="message" class="alert-success">{{ message }}</div>
-      </transition>
-
-      <div v-if="currentTab === 'patients'">
-        <section class="card form-box">
-          <div class="form-header">
-            <h3>{{ isEditing ? '📝 Modifier le Patient' : '👤 Admission Nouveau Patient' }}</h3>
-            <button v-if="isEditing" @click="resetFormulaire" class="btn-cancel-top">Annuler l'édition</button>
+  <div class="min-h-screen bg-slate-50 font-sans">
+    <!-- Premium Nurse Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/5 border border-primary/10 text-primary">
+              <BaseIcon name="hospital" :size="24" stroke-width="2.5" />
+            </div>
+            <div>
+              <span class="text-xl font-black text-slate-900 tracking-tight block leading-none">E-Sante <span class="text-primary">Infirmier</span></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Gestion des Admissions</span>
+            </div>
           </div>
 
-          <form @submit.prevent="enregistrerPatient" class="grid-form">
-            <div class="input-group">
-              <label>Nom</label>
-              <input v-model="formPatient.nom" placeholder="Nom" required>
+          <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              Service Actif
             </div>
-            <div class="input-group">
-              <label>Prénom</label>
-              <input v-model="formPatient.prenom" placeholder="Prénom" required>
-            </div>
-            <div class="input-group">
-              <label>Email</label>
-              <input v-model="formPatient.email" type="email" placeholder="Email" required>
-            </div>
-            <div class="input-group">
-              <label>Mot de passe {{ isEditing ? '(Optionnel)' : '' }}</label>
-              <input v-model="formPatient.password" type="password" :required="!isEditing">
-            </div>
-            <div class="input-group">
-              <label>Date de naissance</label>
-              <input v-model="formPatient.date_naissance" type="date" required>
-            </div>
-            <div class="input-group">
-              <label>Sexe</label>
-              <select v-model="formPatient.sexe">
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>Médecin Référent</label>
-              <select v-model="formPatient.medecin_id" required>
-                <option value="" disabled>Choisir un médecin</option>
-                <option v-for="m in medecinsDisponibles" :key="m.id" :value="m.id">
-                  Dr. {{ m.user?.nom }} ({{ m.specialite }})
-                </option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>Téléphone</label>
-              <input v-model="formPatient.telephone" placeholder="06XXXXXXXX">
-            </div>
-            <div class="input-group full-width">
-              <label>Adresse</label>
-              <input v-model="formPatient.adresse" placeholder="Adresse complète">
-            </div>
-
-            <button type="submit" :class="isEditing ? 'btn-update' : 'btn-submit'" :disabled="isLoading">
-              {{ isLoading ? 'Opération en cours...' : (isEditing ? 'Enregistrer les modifications' : 'Valider l\'admission') }}
-            </button>
-          </form>
-        </section>
-
-        <div class="table-container card">
-          <h3>Liste des patients hospitalisés</h3>
-          <table class="table-custom">
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Médecin Référent</th>
-                <th>Sexe</th>
-                <th>Contact</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in listPatients" :key="p.id">
-                <td>
-                  <div class="patient-info">
-                    <span class="p-name">{{ p.user?.nom }} {{ p.user?.prenom }}</span>
-                    <span class="p-email">{{ p.user?.email }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="badge-med">Dr. {{ p.medecin?.user?.nom || 'Non assigné' }}</span>
-                </td>
-                <td>{{ p.sexe }}</td>
-                <td>{{ p.telephone }}</td>
-                <td class="actions-cell">
-                  <button class="btn-edit" @click="preparerModification(p)" title="Modifier">
-                    Modifier
-                  </button>
-                  <button class="btn-delete" @click="supprimerPatient(p.id)" title="Supprimer">
-                    Supprimer
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="listPatients.length === 0">
-                <td colspan="5" style="text-align: center; padding: 2rem; color: #7f8c8d;">
-                  Aucun patient trouvé.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            <AppButton variant="secondary" size="sm" @click="handleLogout" custom-class="group">
+              <BaseIcon name="logout" :size="14" class="mr-2 group-hover:-translate-x-1 transition-transform" />
+              Déconnexion
+            </AppButton>
+          </div>
         </div>
       </div>
-    </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div v-if="message" class="fixed top-24 right-8 z-50 p-4 bg-primary text-white rounded-2xl shadow-xl animate-in slide-in-from-right-10 font-bold">
+        {{ message }}
+      </div>
+
+      <div v-if="errorMessage" class="fixed top-24 left-8 z-50 p-4 bg-red-600 text-white rounded-2xl shadow-xl font-bold max-w-md">
+        {{ errorMessage }}
+      </div>
+
+      <div class="space-y-10">
+        <!-- Admission Form Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div class="lg:col-span-1 space-y-6">
+            <h2 class="text-3xl font-black text-slate-900 tracking-tight leading-tight">
+              {{ isEditing ? 'Modifier le Dossier' : 'Admission Patient' }}
+            </h2>
+            <p class="text-slate-500 font-medium italic">
+              {{ isEditing ? 'Mettez à jour les informations du dossier patient sélectionné.' : 'Enregistrez un nouveau patient et assignez-le à un médecin référent.' }}
+            </p>
+
+            <div class="p-6 bg-primary/5 rounded-3xl border border-primary/10">
+              <h4 class="text-xs font-black text-primary uppercase tracking-widest mb-2">Conseil</h4>
+              <p class="text-sm text-slate-600 leading-relaxed font-medium">Assurez-vous que l'adresse email est correcte pour que le patient puisse accéder à son espace.</p>
+            </div>
+          </div>
+
+          <div class="lg:col-span-2">
+            <AppCard>
+              <form @submit.prevent="enregistrerPatient" class="space-y-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <AppInput v-model="formPatient.nom" label="Nom" placeholder="Ex: Dupont" required />
+                  <AppInput v-model="formPatient.prenom" label="Prénom" placeholder="Ex: Jean" required />
+                  <AppInput v-model="formPatient.email" label="Email" type="email" placeholder="jean.dupont@email.com" required />
+                  <AppInput v-model="formPatient.password" label="Mot de passe" type="password" :placeholder="isEditing ? 'Laisser vide pour ne pas changer' : '********'" :required="!isEditing" />
+                  <AppInput v-model="formPatient.date_naissance" label="Date de naissance" type="date" required />
+
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Sexe</label>
+                    <div class="flex gap-4">
+                      <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-white transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary has-[:checked]:text-primary font-bold text-sm">
+                        <input type="radio" v-model="formPatient.sexe" value="M" class="hidden" />
+                        Masculin
+                      </label>
+                      <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-white transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary has-[:checked]:text-primary font-bold text-sm">
+                        <input type="radio" v-model="formPatient.sexe" value="F" class="hidden" />
+                        Féminin
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Médecin Référent</label>
+                    <select v-model="formPatient.medecin_id" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-slate-700">
+                      <option value="" disabled>Choisir un médecin</option>
+                      <option v-for="m in medecinsDisponibles" :key="m.id" :value="m.id">
+                        Dr. {{ m.user?.nom }} ({{ m.specialite }})
+                      </option>
+                    </select>
+                  </div>
+
+                  <AppInput v-model="formPatient.telephone" label="Téléphone" placeholder="06XXXXXXXX" required />
+                  <div class="sm:col-span-2">
+                    <AppInput v-model="formPatient.adresse" label="Adresse" placeholder="Adresse complète" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                  <AppButton type="submit" :loading="isLoading" custom-class="flex-1 py-4 text-lg">
+                    {{ isEditing ? 'Enregistrer les modifications' : 'Valider l\'admission' }}
+                  </AppButton>
+                  <AppButton v-if="isEditing" variant="secondary" @click="resetFormulaire" custom-class="flex-1 py-4 text-lg">
+                    Annuler
+                  </AppButton>
+                </div>
+              </form>
+            </AppCard>
+          </div>
+        </div>
+
+        <!-- Patients List Section -->
+        <div class="space-y-6">
+          <div class="flex items-center justify-between px-2">
+            <h3 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <BaseIcon name="users" :size="24" class="text-slate-300" /> Liste des patients hospitalisés
+            </h3>
+            <span class="text-xs font-black text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100">
+              {{ listPatients.length }} Patients
+            </span>
+          </div>
+
+          <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-slate-50/50 border-b border-slate-100">
+                  <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient</th>
+                  <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médecin Référent</th>
+                  <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Détails</th>
+                  <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                <tr v-for="p in listPatients" :key="p.id" class="group hover:bg-slate-50/30 transition-all duration-300">
+                  <td class="px-8 py-6">
+                    <div class="flex items-center gap-4">
+                      <div class="w-12 h-12 bg-slate-100 text-slate-600 flex items-center justify-center rounded-2xl font-bold border border-slate-200 group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                        {{ p.user?.nom?.charAt(0) }}{{ p.user?.prenom?.charAt(0) }}
+                      </div>
+                      <div>
+                        <p class="font-black text-slate-900 leading-none mb-1 group-hover:text-primary transition-colors">{{ p.user?.nom }} {{ p.user?.prenom }}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ p.user?.email }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-8 py-6">
+                    <div class="flex items-center gap-2">
+                      <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+                        Dr. {{ p.medecin?.user?.nom || 'Non assigné' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-8 py-6">
+                    <div class="space-y-1">
+                      <p class="text-xs font-bold text-slate-600 flex items-center gap-2">
+                        <span class="text-[10px] grayscale group-hover:grayscale-0 transition-all">🚻</span> {{ p.sexe }}
+                      </p>
+                      <p class="text-xs font-bold text-slate-600 flex items-center gap-2">
+                        <span class="text-[10px] grayscale group-hover:grayscale-0 transition-all">📞</span> {{ p.telephone }}
+                      </p>
+                    </div>
+                  </td>
+                  <td class="px-8 py-6 text-right">
+                    <div class="flex justify-end gap-2">
+                      <button @click="preparerModification(p)" class="p-3 bg-slate-50 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-xl transition-all" title="Modifier">
+                        <BaseIcon name="edit" :size="16" />
+                      </button>
+                      <button @click="supprimerPatient(p.id)" class="p-3 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all" title="Supprimer">
+                        <BaseIcon name="trash" :size="16" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="listPatients.length === 0">
+                  <td colspan="4" class="px-8 py-20 text-center">
+                    <div class="text-6xl mb-4">🏥</div>
+                    <h3 class="text-lg font-bold text-slate-900">Aucun patient actif</h3>
+                    <p class="text-slate-400 font-medium">Commencez par enregistrer un patient via le formulaire ci-dessus.</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-10 mt-20">
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">&copy; 2026 E-Sante Platform — Espace Professionnel</p>
+      </div>
+    </footer>
   </div>
 </template>
-
-<style scoped>
-/* Configuration Générale */
-.infirmier-container {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-  background: #f0f2f5;
-  min-height: 100vh;
-  color: #2c3e50;
-}
-
-/* Navbar */
-.navbar {
-  background: #1a252f;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  padding: 0.8rem 5%;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.nav-links {
-  display: flex;
-  list-style: none;
-  gap: 2.5rem;
-}
-
-.nav-links li {
-  cursor: pointer;
-  font-weight: 500;
-  transition: color 0.3s;
-}
-
-.nav-links li.active {
-  color: #3498db;
-  border-bottom: 2px solid #3498db;
-}
-
-/* Contenu */
-.content {
-  padding: 2rem 5%;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin-bottom: 2rem;
-}
-
-/* Formulaire */
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f0f2f5;
-  padding-bottom: 0.5rem;
-}
-
-.grid-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.2rem;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.input-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #7f8c8d;
-}
-
-.full-width { grid-column: 1 / -1; }
-
-input, select {
-  padding: 0.7rem;
-  border: 1px solid #dcdde1;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-input:focus { border-color: #3498db; outline: none; }
-
-/* Boutons */
-.btn-submit {
-  grid-column: 1 / -1;
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 0.9rem;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.btn-update {
-  grid-column: 1 / -1;
-  background: #f39c12;
-  color: white;
-  border: none;
-  padding: 0.9rem;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-cancel-top {
-  background: #95a5a6;
-  color: white;
-  border: none;
-  padding: 5px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* Tableau */
-.table-container h3 { margin-bottom: 1.2rem; }
-
-.table-custom {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table-custom th {
-  text-align: left;
-  background: #f8f9fa;
-  padding: 1rem;
-  color: #7f8c8d;
-  font-size: 0.9rem;
-}
-
-.table-custom td { padding: 1rem; border-bottom: 1px solid #f1f2f6; }
-
-.patient-info { display: flex; flex-direction: column; }
-.p-name { font-weight: 600; color: #2c3e50; }
-.p-email { font-size: 0.8rem; color: #95a5a6; }
-
-.badge-med {
-  background: #e1f5fe;
-  color: #0288d1;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-/* Actions */
-.actions-cell { display: flex; gap: 0.5rem; }
-
-.btn-edit {
-  background: #3498db;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-delete {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-logout {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-/* Alertes */
-.alert-success {
-  background: #27ae60;
-  color: white;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-/* Transitions */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-</style>
