@@ -26,9 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:ADMINGLOBAL'])->group(function () {
     Route::post('/hopitaux', [HopitalController::class, 'store']);
-    Route::put('/hopitaux/{id}', [HopitalController::class, 'update']); // Modifier hopital
-    Route::delete('/hopitaux/{id}', [HopitalController::class, 'destroy']); // Supprimer hopital
-    Route::get('/hopitaux', [HopitalController::class, 'index']); //liste des hopitaux
+    Route::put('/hopitaux/{id}', [HopitalController::class, 'update']);
+    Route::delete('/hopitaux/{id}', [HopitalController::class, 'destroy']);
+    Route::get('/hopitaux', [HopitalController::class, 'index']); 
     Route::post('/admins-hopital', [AdminController::class, 'createAdminHopital']); // Création et Affectation de l'Admin Hopital
 
 });
@@ -36,10 +36,10 @@ Route::middleware(['auth:sanctum', 'role:ADMINGLOBAL'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:ADMINHOPITAL'])->group(function () {
     // CRUD toxicites
-    Route::post('/hopital/toxicites', [ToxiciteController::class, 'store']); //ajouter toxicite
-    Route::get('/hopital/toxicites', [ToxiciteController::class, 'index']);      // Voir tout toxicite
-    Route::put('/hopital/toxicites/{id}', [ToxiciteController::class, 'update']); // Modifier toxicite
-    Route::delete('/hopital/toxicites/{id}', [ToxiciteController::class, 'destroy']); // Supprimer toxicite
+    Route::post('/hopital/toxicites', [ToxiciteController::class, 'store']);
+    Route::get('/hopital/toxicites', [ToxiciteController::class, 'index']);
+    Route::put('/hopital/toxicites/{id}', [ToxiciteController::class, 'update']);
+    Route::delete('/hopital/toxicites/{id}', [ToxiciteController::class, 'destroy']);
 
     // CRUD symptomes
     Route::post('/symptomes', [SymptomeController::class, 'store']);
