@@ -13,7 +13,6 @@ class ConseilController extends Controller
     {
         $medecin = Auth::user()->medecin;
 
-        // Njibo les conseils dyal les patients dyal had t-tbib
         $conseils = Conseil::whereHas('patient', function ($query) use ($medecin) {
             $query->where('medecin_id', $medecin->id);
         })->with('patient.user', 'etatGeneral')->get();
@@ -39,11 +38,8 @@ class ConseilController extends Controller
             return response()->json(['message' => 'État général invalide, ni consultation ni réponse associée'], 400);
         }
 
-        // N-jbdou patient_id men l-Etat General (soit consultation soit reponse)
-        // $patientId = $etat->consultation ? $etat->consultation->patient_id : $etat->reponses_id;
-
         $conseil = Conseil::create([
-            'date' => now(), // Drna l-weqt dyal daba automatique
+            'date' => now(),
             'description' => $request->description,
             'etat_general_id' => $request->etat_general_id,
             'patient_id' => $patientId
@@ -75,7 +71,6 @@ class ConseilController extends Controller
             return response()->json(['message' => 'Profil patient non trouvé'], 404);
         }
 
-        // On récupère les conseils avec les infos du médecin via l'Etat General
         $conseils = Conseil::where('patient_id', $patient->id)
             ->with(['etatGeneral.consultation.medecin.user'])
             ->with('etatGeneral.reponse.medecin.user')
