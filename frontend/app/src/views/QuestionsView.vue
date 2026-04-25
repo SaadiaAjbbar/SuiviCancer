@@ -1,17 +1,18 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
+import AppButton from '@/components/ui/AppButton.vue';
+import AppInput from '@/components/ui/AppInput.vue';
 
 const token = localStorage.getItem('user_token');
 const questions = ref([]);
 const message = ref('');
 const isLoading = ref(false);
 
-// --- État du Formulaire ---
 const isEditingQ = ref(false);
 const editIdQ = ref(null);
 const formQuestion = ref({ titre: '' });
 
-// 1. READ: Bach n-jibu l-as'ila
 const fetchQuestions = async () => {
   try {
     const res = await fetch('http://localhost:8080/api/medecin/questions', {
@@ -22,15 +23,12 @@ const fetchQuestions = async () => {
     });
     if (res.ok) {
       questions.value = await res.json();
-    } else if (res.status === 403) {
-      console.error("403: Vérifie le rôle de l'utilisateur dans la DB.");
     }
   } catch (e) {
     console.error("Erreur chargement:", e);
   }
 };
 
-// 2. CREATE & UPDATE: Bach n-diro l-Ajout u l-Modification
 const saveQuestion = async () => {
   if (!formQuestion.value.titre.trim()) return;
 
@@ -54,11 +52,8 @@ const saveQuestion = async () => {
     if (res.ok) {
       message.value = isEditingQ.value ? "✅ Question mise à jour !" : "✅ Question ajoutée !";
       resetFormQ();
-      await fetchQuestions(); // Refresh list
+      await fetchQuestions();
       setTimeout(() => message.value = '', 3000);
-    } else {
-      const err = await res.json();
-      alert(err.message || "Erreur lors de l'opération");
     }
   } catch (e) {
     console.error(e);
@@ -67,9 +62,8 @@ const saveQuestion = async () => {
   }
 };
 
-// 3. DELETE: Bach n-mshou
 const deleteQuestion = async (id) => {
-  if (!confirm("Bghiti t-mshi had l-question ?")) return;
+  if (!confirm("Voulez-vous supprimer cette question ?")) return;
 
   try {
     const res = await fetch(`http://localhost:8080/api/medecin/questions/${id}`, {
@@ -89,7 +83,6 @@ const deleteQuestion = async (id) => {
   }
 };
 
-// --- Utils ---
 const prepareEditQ = (q) => {
   isEditingQ.value = true;
   editIdQ.value = q.id;
@@ -107,146 +100,75 @@ onMounted(fetchQuestions);
 </script>
 
 <template>
-  <div class="questions-page">
-    <Transition name="fade">
-      <div v-if="message" class="alert-toast">{{ message }}</div>
-    </Transition>
+  <div class="space-y-10 animate-in fade-in duration-500 max-w-4xl mx-auto">
+    <div v-if="message" class="fixed top-24 right-8 z-50 p-4 bg-primary text-white rounded-2xl shadow-xl animate-in slide-in-from-right-10 font-bold">
+      {{ message }}
+    </div>
 
-    <h2 class="main-title">Espace Médecin : Gestion des Questions</h2>
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Gestion des Questions</h1>
+      <p class="text-slate-500 font-medium">Définissez les questions auxquelles vos patients devront répondre quotidiennement.</p>
+    </div>
 
-    <section class="card question-form-card">
-      <h3 class="title-border">{{ isEditingQ ? 'Modifier la question' : 'Ajouter une nouvelle question' }}</h3>
-      <form @submit.prevent="saveQuestion" class="inline-form">
-        <div class="input-group">
-          <input v-model="formQuestion.titre" placeholder="Kteb l-question dyalk hna..." required :disabled="isLoading">
-          <button type="submit" :disabled="isLoading" :class="['btn-save', { 'btn-update': isEditingQ }]">
-            {{ isLoading ? '...' : (isEditingQ ? 'Mettre à jour' : 'Enregistrer') }}
-          </button>
-          <button v-if="isEditingQ" @click="resetFormQ" type="button" class="btn-cancel">
+    <AppCard>
+      <template #header>
+        <h3 class="text-lg font-bold text-slate-900">{{ isEditingQ ? 'Modifier la question' : 'Ajouter une nouvelle question' }}</h3>
+      </template>
+      <form @submit.prevent="saveQuestion" class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+          <AppInput
+            v-model="formQuestion.titre"
+            placeholder="Ex: Comment vous sentez-vous ce matin ?"
+            required
+            :disabled="isLoading"
+          />
+        </div>
+        <div class="flex gap-2">
+          <AppButton type="submit" :loading="isLoading" :variant="isEditingQ ? 'primary' : 'primary'">
+            {{ isEditingQ ? 'Mettre à jour' : 'Enregistrer' }}
+          </AppButton>
+          <AppButton v-if="isEditingQ" variant="secondary" @click="resetFormQ">
             Annuler
-          </button>
+          </AppButton>
         </div>
       </form>
-    </section>
+    </AppCard>
 
-    <section class="questions-list-container">
-      <div class="list-header">
-        <h3>Banque de Questions ({{ questions.length }})</h3>
-        <p>Hado homa les questions li ghadi y-jawbo 3lihom l-patients dyalk.</p>
+    <div class="space-y-4">
+      <div class="flex items-center justify-between px-2">
+        <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest">Banque de Questions ({{ questions.length }})</h3>
       </div>
 
-      <div class="questions-grid">
-        <div v-for="(q, index) in questions" :key="q.id" class="q-item-card">
-          <div class="q-content">
-            <span class="q-number">#{{ index + 1 }}</span>
-            <p>{{ q.titre }}</p>
+      <div class="grid grid-cols-1 gap-4">
+        <div 
+          v-for="(q, index) in questions" 
+          :key="q.id" 
+          class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group hover:border-primary/30 transition-all duration-300"
+        >
+          <div class="flex items-center gap-6">
+            <span class="text-2xl font-black text-slate-100 group-hover:text-primary/10 transition-colors">#{{ index + 1 }}</span>
+            <p class="text-slate-700 font-bold text-lg">{{ q.titre }}</p>
           </div>
-          <div class="q-actions">
-            <button @click="prepareEditQ(q)" class="action-btn edit" title="Modifier">✏️</button>
-            <button @click="deleteQuestion(q.id)" class="action-btn delete" title="Supprimer">🗑️</button>
+          <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button @click="prepareEditQ(q)" class="p-3 bg-slate-50 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-xl transition-all" title="Modifier">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            </button>
+            <button @click="deleteQuestion(q.id)" class="p-3 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all" title="Supprimer">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
-      <div v-if="questions.length === 0" class="empty-state">
-        <p>Ma kayna hta question. Zid chi wehda l-foug!</p>
+      <div v-if="questions.length === 0" class="py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300">
+        <div class="text-6xl mb-4">💡</div>
+        <h3 class="text-lg font-bold text-slate-900">Aucune question définie</h3>
+        <p class="text-slate-500">Commencez par ajouter une question pour vos patients.</p>
       </div>
-    </section>
+    </div>
   </div>
 </template>
-
-<style scoped>
-/* Had l-CSS dyalk khdam mzyan, khalih kima houwa hit m-organisé */
-.questions-page {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.main-title {
-  color: #1e293b;
-  margin-bottom: 30px;
-  text-align: center;
-}
-
-.alert-toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #10b981;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  z-index: 1000;
-}
-
-.card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 10px;
-}
-
-.input-group input {
-  flex-grow: 1;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-}
-
-.btn-save {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 0 25px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.btn-update {
-  background: #f59e0b;
-}
-
-.q-item-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.action-btn {
-  border: none;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-.edit {
-  background: #fef3c7;
-}
-
-.delete {
-  background: #fee2e2;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
