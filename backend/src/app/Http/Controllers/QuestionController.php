@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class QuestionController extends Controller
 {
-    // 1. Lister les questions créées par ce médecin
     public function index()
     {
         $user = Auth::user();
@@ -22,26 +21,22 @@ class QuestionController extends Controller
         $questions = Question::where('medecin_id', $medecin->id)->get();
         return response()->json($questions);
     }
-    //hena function li ket2afichi lina les questions lpatient
 
 
     public function afficherQuestionsPatient()
     {
         $user = Auth::user();
 
-        // On récupère le profil patient de l'utilisateur connecté
         $patient = $user->patient;
 
         if (!$patient || !$patient->medecin_id) {
             return response()->json(['message' => 'Aucun médecin assigné à ce patient'], 404);
         }
 
-        // On récupère les questions du médecin lié à ce patient
         $questions = Question::where('medecin_id', $patient->medecin_id)->get();
 
         return response()->json($questions);
     }
-    // 2. Créer une nouvelle question (ex: "Quelle est votre température ?")
     public function store(Request $request)
     {
         $request->validate([
