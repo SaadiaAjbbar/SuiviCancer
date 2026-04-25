@@ -39,6 +39,8 @@ const openEtatForm = (consult) => {
 const isEditingEtat = ref(false);
 const editEtatId = ref(null);
 
+
+
 const prepareEditEtat = (consult) => {
   isEditingEtat.value = true;
   editEtatId.value = consult.etat_general.id;
