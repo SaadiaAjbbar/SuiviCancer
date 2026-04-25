@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ToxiciteController extends Controller
 {
+    
     public function store(Request $request)
     {
         // 1. Validation

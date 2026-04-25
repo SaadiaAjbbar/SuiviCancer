@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Symptome;
 
 class SymptomeController extends Controller
+
 {
     public function store(Request $request)
     {
