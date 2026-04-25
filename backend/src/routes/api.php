@@ -20,7 +20,6 @@ use App\Http\Controllers\TraitementController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
-// Routes Protégées (khass l'Token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
