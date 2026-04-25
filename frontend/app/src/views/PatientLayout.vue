@@ -1,77 +1,13 @@
-<template>
-  <div class="patient-app">
-    <nav class="patient-nav">
-      <div class="nav-container">
-        <div class="brand">
-          <span class="icon">🏥</span>
-          <span class="logo-text">E-Sante Patient</span>
-        </div>
-
-        <div class="user-menu">
-          <div class="user-info">
-            <span class="user-name">{{ userData.nom }} {{ userData.prenom }}</span>
-            <span class="user-role">Patient</span>
-          </div>
-
-        </div>
-      </div>
-    </nav>
-
-    <div class="layout-body">
-      <aside class="sidebar">
-        <router-link to="/patient" class="nav-item" exact-active-class="active">
-          <span class="nav-icon">🏠</span>
-          <span class="nav-label">Tableau de bord</span>
-        </router-link>
-
-        <router-link to="/patient/bilans" class="nav-item" active-class="active">
-          <span class="nav-icon">🩺</span>
-          <span class="nav-label">Mes Bilans</span>
-        </router-link>
-
-        <router-link to="/patient/rendez-vous" class="nav-item" active-class="active">
-          <span class="nav-icon">📅</span>
-          <span class="nav-label">Mes Rendez-vous</span>
-        </router-link>
-
-        <router-link to="/patient/traitements" class="nav-item" active-class="active">
-          <span class="nav-icon">💊</span>
-          <span class="nav-label">Mes Traitements</span>
-        </router-link>
-
-        <router-link to="/patient/conseils" class="nav-item" active-class="active">
-          <span class="nav-icon">💡</span>
-          <span class="nav-label">Mes Conseils</span>
-        </router-link>
-
-        <router-link to="/patient/consultations" class="nav-item" active-class="active">
-          <span class="nav-icon">🏥</span>
-          <span class="nav-label">Mes Consultations</span>
-        </router-link>
-        <button @click="handleLogout" class="btn-logout" title="Déconnexion">
-          <span class="logout-icon">🚪</span>
-          <span class="logout-text">Déconnexion</span>
-        </button>
-
-      </aside>
-
-      <main class="main-content">
-        <router-view />
-      </main>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { useRouter } from 'vue-router';
+import AppButton from '@/components/ui/AppButton.vue';
+import BaseIcon from '@/components/ui/BaseIcon.vue';
 
 const router = useRouter();
-// On récupère les données de l'utilisateur pour l'affichage
 const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
 const token = localStorage.getItem('user_token');
 
 const handleLogout = async () => {
-  // Optionnel : Avertir le backend pour révoquer le token
   try {
     await fetch('http://localhost:8080/api/logout', {
       method: 'POST',
@@ -84,215 +20,132 @@ const handleLogout = async () => {
     console.error("Erreur lors de la déconnexion backend:", error);
   }
 
-  // 1. Vider le stockage local
   localStorage.removeItem('user_token');
   localStorage.removeItem('user_data');
   localStorage.removeItem('user_role');
-
-  // Alternative radicale : localStorage.clear();
-
-  // 2. Rediriger vers la page de login
   router.push('/login');
 };
 
+const navItems = [
+  { name: 'Dashboard', path: '/patient', icon: 'home' },
+  { name: 'Mes Bilans', path: '/patient/bilans', icon: 'stetho' },
+  { name: 'Rendez-vous', path: '/patient/rendez-vous', icon: 'calendar' },
+  { name: 'Traitements', path: '/patient/traitements', icon: 'pill' },
+  { name: 'Conseils', path: '/patient/conseils', icon: 'lightbulb' },
+  { name: 'Consultations', path: '/patient/consultations', icon: 'hospital' },
+];
 </script>
 
-<style scoped>
-/* Reset & Layout */
-.patient-app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #f4f7f6;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+<template>
+  <div class="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <!-- Sidebar -->
+    <aside class="hidden lg:flex flex-col w-72 bg-white border-r border-slate-200 transition-all duration-300">
+      <div class="p-6 flex items-center gap-4 border-b border-slate-100">
+        <div class="w-12 h-12 bg-primary/10 flex items-center justify-center rounded-2xl text-primary shadow-inner">
+          <BaseIcon name="hospital" :size="24" stroke-width="2.5" />
+        </div>
+        <div>
+          <h1 class="text-slate-900 font-black text-xl leading-none tracking-tight">E-Sante</h1>
+          <p class="text-[10px] text-slate-400 font-bold tracking-[0.1em] uppercase mt-1">Espace Patient</p>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+        <router-link
+          v-for="item in navItems"
+          :key="item.path"
+          :to="item.path"
+          class="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-300 group"
+          :class="{ 'bg-primary text-white shadow-xl shadow-primary/25 translate-x-1': $route.path === item.path }"
+        >
+          <div class="flex items-center justify-center transition-transform group-hover:scale-110">
+            <BaseIcon :name="item.icon" :size="20" />
+          </div>
+          <span class="font-bold text-sm tracking-tight">{{ item.name }}</span>
+        </router-link>
+      </nav>
+
+      <div class="p-6 border-t border-slate-100 bg-slate-50/50">
+        <AppButton
+          variant="ghost"
+          custom-class="w-full justify-start text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-2xl group transition-all"
+          @click="handleLogout"
+        >
+          <BaseIcon name="logout" :size="18" class="mr-3 group-hover:translate-x-1 transition-transform" />
+          <span class="font-bold text-sm">Déconnexion</span>
+        </AppButton>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <!-- Top Navbar -->
+      <header class="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-40">
+        <div class="lg:hidden flex items-center gap-3">
+           <div class="w-10 h-10 bg-primary flex items-center justify-center rounded-xl text-white shadow-lg shadow-primary/20">
+             <BaseIcon name="hospital" :size="20" />
+           </div>
+           <span class="font-black text-slate-900 tracking-tight">E-Sante</span>
+        </div>
+        
+        <div class="hidden lg:flex items-center gap-3 text-sm font-bold">
+          <span class="text-slate-400">Dashboard</span>
+          <BaseIcon name="home" :size="14" class="text-slate-300" />
+          <span class="text-slate-900 tracking-tight">{{ $route.name || 'Aperçu' }}</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="flex flex-col items-end">
+            <span class="text-sm font-black text-slate-900 leading-none">{{ userData.nom }} {{ userData.prenom }}</span>
+            <span class="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Patient Vérifié</span>
+          </div>
+          <div class="w-11 h-11 bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 flex items-center justify-center rounded-2xl font-black border-2 border-white shadow-sm ring-1 ring-slate-200">
+            {{ userData.nom?.charAt(0) }}{{ userData.prenom?.charAt(0) }}
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="flex-1 overflow-y-auto p-6 lg:p-10">
+        <div class="max-w-6xl mx-auto">
+          <router-view v-slot="{ Component }">
+            <transition name="fade-page" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </div>
+      </main>
+
+      <!-- Mobile Navigation -->
+      <nav class="lg:hidden flex items-center justify-around bg-white/90 backdrop-blur-lg border-t border-slate-200 h-20 px-4 pb-2">
+        <router-link
+          v-for="item in navItems.slice(0, 5)"
+          :key="item.path"
+          :to="item.path"
+          class="flex flex-col items-center justify-center flex-1 py-2 rounded-2xl transition-all"
+          :class="{ 'text-primary bg-primary/5 font-black': $route.path === item.path }"
+        >
+          <BaseIcon :name="item.icon" :size="22" />
+          <span class="text-[9px] uppercase tracking-widest font-black mt-1.5">{{ item.name.split(' ')[1] || item.name }}</span>
+        </router-link>
+      </nav>
+    </div>
+  </div>
+</template>
+
+<style>
+.fade-page-enter-active,
+.fade-page-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Navbar */
-.patient-nav {
-  background-color: #ffffff;
-  height: 70px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+.fade-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
-.nav-container {
-  width: 100%;
-  padding: 0 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-text {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #2c3e50;
-  letter-spacing: -0.5px;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.user-info {
-  text-align: right;
-  line-height: 1.2;
-}
-
-.user-name {
-  display: block;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.user-role {
-  font-size: 0.75rem;
-  color: #3498db;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.btn-logout {
-  background: #fff5f5;
-  border: 1px solid #feb2b2;
-  font-size: 1.2rem;
-  padding: 6px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-logout:hover {
-  background: #fed7d7;
-  transform: translateY(-1px);
-}
-
-/* Body & Sidebar */
-.layout-body {
-  display: flex;
-  flex: 1;
-}
-
-.sidebar {
-  width: 280px;
-  background-color: #ffffff;
-  border-right: 1px solid #eef2f7;
-  padding: 25px 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 14px 18px;
-  text-decoration: none;
-  color: #64748b;
-  border-radius: 12px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.nav-item:hover {
-  background-color: #f8fafc;
-  color: #334155;
-}
-
-.nav-item.active {
-  background-color: #3498db;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
-}
-
-.nav-icon {
-  font-size: 1.2rem;
-}
-
-/* Content Area */
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
-/* Responsive (Tablettes et Mobiles) */
-@media (max-width: 992px) {
-  .sidebar {
-    width: 80px;
-  }
-
-  .nav-label {
-    display: none;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: 15px;
-  }
-}
-
-.btn-logout {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff0f0;
-  border: 1px solid #ffcccc;
-  color: #e53e3e;
-  padding: 8px 15px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.btn-logout:hover {
-  background: #ffe0e0;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(229, 62, 62, 0.1);
-}
-
-.logout-icon {
-  font-size: 1.2rem;
-}
-
-
-
-@media (max-width: 768px) {
-  .logout-text {
-    display: none;
-  }
-
-  .sidebar {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 70px;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 0;
-    border-right: none;
-    border-top: 1px solid #eef2f7;
-    z-index: 1000;
-  }
-
-  .main-content {
-    padding: 1rem;
-    padding-bottom: 80px;
-    /* Espace pour la barre mobile */
-  }
+.fade-page-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
