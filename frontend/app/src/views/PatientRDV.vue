@@ -1,44 +1,6 @@
-<template>
-  <div class="rdv-page">
-    <header class="page-header">
-      <h2>📅 Mes Rendez-vous</h2>
-      <p>Retrouvez ici vos consultations programmées et passées.</p>
-    </header>
-
-    <div v-if="isLoading" class="loading">Chargement de vos rendez-vous...</div>
-
-    <div v-else-if="rdvs.length > 0" class="rdv-grid">
-      <div v-for="rdv in rdvs" :key="rdv.id" :class="['rdv-card', getStatusClass(rdv.status)]">
-        <div class="rdv-date">
-          <span class="day">{{ getDay(rdv.date) }}</span>
-          <span class="month">{{ getMonth(rdv.date) }}</span>
-        </div>
-
-        <div class="rdv-info">
-          <div class="status-badge">{{ rdv.status }}</div>
-          <h3>Consultation de suivi</h3>
-          <p class="time">🕒 Heure : {{ getHour(rdv.date) }}</p>
-          <p class="doctor" v-if="rdv.etat_general?.consultation?.medecin">
-            👨‍⚕️ Médecin : Dr. {{ rdv.etat_general.consultation.medecin.user.nom }}
-          </p>
-        </div>
-
-        <div class="rdv-footer" v-if="isUpcoming(rdv.date)">
-          <span class="incoming-tag">Prochainement</span>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <span class="icon">📅</span>
-      <h3>Aucun rendez-vous</h3>
-      <p>Vous n'avez pas encore de rendez-vous programmé.</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import AppCard from '@/components/ui/AppCard.vue';
 
 const rdvs = ref([]);
 const isLoading = ref(true);
@@ -62,147 +24,76 @@ const fetchRDVs = async () => {
   }
 };
 
-// --- Helpers de formatage ---
 const getDay = (d) => new Date(d).getDate();
 const getMonth = (d) => new Date(d).toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase();
 const getHour = (d) => new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const isUpcoming = (d) => new Date(d) > new Date();
 
-const getStatusClass = (status) => {
-  if (status === 'Programmé') return 'status-planned';
-  if (status === 'Annulé') return 'status-cancelled';
-  return 'status-done';
-};
-
 onMounted(fetchRDVs);
 </script>
 
-<style scoped>
-.rdv-page {
-  max-width: 1000px;
-  margin: 0 auto;
-}
+<template>
+  <div class="space-y-10 animate-in fade-in duration-500">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Mes Rendez-vous</h1>
+      <p class="text-slate-500 font-medium">Retrouvez ici vos consultations programmées et vos suivis passés.</p>
+    </div>
 
-.page-header {
-  margin-bottom: 30px;
-}
+    <div v-if="isLoading" class="py-20 flex flex-col items-center justify-center">
+      <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-500 font-bold">Récupération de vos rendez-vous...</p>
+    </div>
 
-.page-header h2 {
-  color: #2c3e50;
-  font-size: 1.8rem;
-  margin-bottom: 5px;
-}
+    <div v-else-if="rdvs.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <AppCard 
+        v-for="rdv in rdvs" 
+        :key="rdv.id" 
+        padding="false"
+        class="group overflow-hidden border-slate-200/60 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+      >
+        <div class="p-6 flex items-start gap-5">
+          <div class="bg-primary/5 text-primary border border-primary/10 rounded-2xl p-3 w-16 h-16 flex flex-col items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
+            <span class="text-2xl font-black leading-none">{{ getDay(rdv.date) }}</span>
+            <span class="text-[10px] font-black uppercase tracking-tighter mt-1">{{ getMonth(rdv.date) }}</span>
+          </div>
 
-.page-header p {
-  color: #7f8c8d;
-}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-2">
+              <span 
+                class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest"
+                :class="isUpcoming(rdv.date) ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'"
+              >
+                {{ isUpcoming(rdv.date) ? 'Programmé' : 'Passé' }}
+              </span>
+              <span v-if="isUpcoming(rdv.date)" class="text-[10px] font-black text-primary animate-pulse">PROCHAIN</span>
+            </div>
+            
+            <h3 class="font-black text-slate-900 text-lg truncate mb-1">Consultation de suivi</h3>
+            <div class="space-y-1">
+              <p class="text-xs font-bold text-slate-500 flex items-center gap-2">
+                <span class="text-base grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all">🕒</span> {{ getHour(rdv.date) }}
+              </p>
+              <p class="text-xs font-bold text-slate-500 flex items-center gap-2" v-if="rdv.etat_general?.consultation?.medecin">
+                <span class="text-base grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all">👨‍⚕️</span> Dr. {{ rdv.etat_general.consultation.medecin.user.nom }}
+              </p>
+            </div>
+          </div>
+        </div>
 
-.rdv-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+           <button class="text-xs font-black text-primary hover:underline uppercase tracking-widest">Détails</button>
+           <div class="flex -space-x-2">
+             <div class="w-6 h-6 rounded-full border-2 border-white bg-slate-200"></div>
+             <div class="w-6 h-6 rounded-full border-2 border-white bg-slate-300"></div>
+           </div>
+        </div>
+      </AppCard>
+    </div>
 
-.rdv-card {
-  background: white;
-  border-radius: 16px;
-  display: flex;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid #edf2f7;
-  transition: transform 0.2s;
-}
-
-.rdv-card:hover {
-  transform: translateY(-5px);
-}
-
-.rdv-date {
-  background: #f8fafc;
-  padding: 10px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 70px;
-  border: 1px solid #e2e8f0;
-}
-
-.day {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #3498db;
-}
-
-.month {
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: #94a3b8;
-}
-
-.rdv-info {
-  margin-left: 20px;
-  flex: 1;
-}
-
-.rdv-info h3 {
-  font-size: 1.1rem;
-  margin: 10px 0 5px;
-  color: #1e293b;
-}
-
-.rdv-info p {
-  margin: 3px 0;
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  background: #e2e8f0;
-}
-
-/* Couleurs par Status */
-.status-planned .status-badge {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-planned {
-  border-left: 5px solid #22c55e;
-}
-
-.incoming-tag {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: #3498db;
-  color: white;
-  font-size: 0.7rem;
-  padding: 4px 12px;
-  border-bottom-left-radius: 12px;
-  font-weight: bold;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px;
-  background: white;
-  border-radius: 20px;
-  color: #94a3b8;
-}
-
-.empty-state .icon {
-  font-size: 4rem;
-  display: block;
-  margin-bottom: 10px;
-}
-</style>
+    <div v-else class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+      <div class="text-7xl mb-6">📅</div>
+      <h3 class="text-2xl font-black text-slate-900">Aucun rendez-vous</h3>
+      <p class="text-slate-500 font-medium max-w-md mx-auto mt-2">Vous n'avez pas encore de rendez-vous programmé. Contactez votre médecin si nécessaire.</p>
+    </div>
+  </div>
+</template>
