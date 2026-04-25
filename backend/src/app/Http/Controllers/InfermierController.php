@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class InfermierController extends Controller
 {
+    
     // 1. Afficher toutes les infirmières de l'hôpital de l'admin
     public function index()
     {
