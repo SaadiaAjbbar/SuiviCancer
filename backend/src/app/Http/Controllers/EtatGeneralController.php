@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 
 class EtatGeneralController extends Controller
 {
-    // 1. Ajouter un état général pour une consultation
     public function store(Request $request)
     {
         $request->validate([
@@ -44,7 +43,6 @@ class EtatGeneralController extends Controller
         return response()->json(['message' => 'État général enregistré', 'data' => $etat], 201);
     }
 
-    // 2. Afficher l'état général d'une consultation précise
     public function showByConsultation($consultation_id)
     {
         $user = Auth::user();
@@ -61,7 +59,6 @@ class EtatGeneralController extends Controller
         return response()->json($etat);
     }
 
-    // 3. Modifier l'état général
     public function update(Request $request, $id)
     {
         $user = Auth::user();
@@ -75,7 +72,6 @@ class EtatGeneralController extends Controller
         return response()->json(['message' => 'État général mis à jour', 'data' => $etat]);
     }
 
-    // 4. Supprimer
     public function destroy($id)
     {
         $user = Auth::user();
@@ -97,7 +93,6 @@ class EtatGeneralController extends Controller
             return response()->json(['message' => 'Profil patient non trouvé'], 404);
         }
 
-        // Njibou les bilans li liés l consultation OR li liés l reponse dial had lpatient
         $bilans = EtatGeneral::where(function ($query) use ($patient) {
             // Cas 1: Bilan via Consultation
             $query->whereHas('consultation', function ($q) use ($patient) {
@@ -110,7 +105,7 @@ class EtatGeneralController extends Controller
         })
             ->with([
                 'consultation.medecin.user',
-                'reponse.patient.medecin.user', // Bach njibou smiyt tbib hta f reponse
+                'reponse.patient.medecin.user',
                 'traitement',
                 'rendezVous',
                 'conseil'
