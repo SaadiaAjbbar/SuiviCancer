@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ToxiciteController extends Controller
 {
-    
+
     public function store(Request $request)
     {
         // 1. Validation
@@ -20,10 +20,9 @@ class ToxiciteController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // 2. Récupérer l'AdminHopital lié à l'utilisateur connecté
+
         $user = Auth::user();
 
-        // On va chercher l'ID de l'hôpital dans la table de liaison
         $adminInfo = AdminHopital::where('user_id', $user->id)->first();
 
         if (!$adminInfo) {
@@ -34,8 +33,8 @@ class ToxiciteController extends Controller
         $toxicite = Toxicite::create([
             'nom' => $request->nom,
             'description' => $request->description,
-            'hopital_id' => $adminInfo->hopital_id, // Affectation automatique
-            'admin_hopital_id' => $user->id        // Qui a créé cette fiche
+            'hopital_id' => $adminInfo->hopital_id,
+            'admin_hopital_id' => $user->id
         ]);
 
         return response()->json([
@@ -44,13 +43,10 @@ class ToxiciteController extends Controller
         ], 201);
     }
 
-    // 1. Modifier une toxicité
     public function update(Request $request, $id)
     {
-        // Jbed l'admin m'logui o l'hopital dyalo
         $adminHopital = Auth::user()->adminHopital;
 
-        // Jbed la toxicité ghir ila kant dyal had l'hopital
         $toxicite = Toxicite::where('id', $id)
             ->where('hopital_id', $adminHopital->hopital_id)
             ->first();
@@ -99,15 +95,14 @@ class ToxiciteController extends Controller
         $user = Auth::user();
 
         if ($user->role == "ADMINHOPITAL") {
-            // Hna khass t-checki wach la relation adminHopital kayna f User model
-            $adminInfo = \App\Models\AdminHopital::where('user_id', $user->id)->first();
+
+        $adminInfo = \App\Models\AdminHopital::where('user_id', $user->id)->first();
             if (!$adminInfo) return response()->json([], 403);
 
             $toxicites = Toxicite::where('hopital_id', $adminInfo->hopital_id)
                 ->with('symptomes')->get();
             return response()->json($toxicites);
         } else if ($user->role == "MEDECIN") {
-            // Ahmed m-logui: khassna njbdou hopital_id men la table medecins
             $medecin = Medecin::where('user_id', $user->id)->first();
 
             if (!$medecin) {

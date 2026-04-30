@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hopital;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -82,6 +83,13 @@ class HopitalController extends Controller
         }
 
         try {
+            $userId = $hopital->admins()->first()->user_id ?? null; // Récupérer l'ID de l'utilisateur admin lié à l'hôpital
+            if ($userId) {
+                $user = User::find($userId);
+                if ($user) {
+                       $user->delete(); 
+                }
+                        }
             $hopital->delete();
         } catch (QueryException $e) {
             // SQLSTATE 23000/23503 indicates FK constraint violation (dependent records exist)

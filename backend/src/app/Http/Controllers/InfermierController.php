@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class InfermierController extends Controller
 {
-    
+
     // 1. Afficher toutes les infirmières de l'hôpital de l'admin
     public function index()
     {
@@ -20,7 +20,7 @@ class InfermierController extends Controller
         $adminHopital = $user->adminHopital;
 
         $infermiers = Infermier::where('hopital_id', $adminHopital->hopital_id)
-            ->with('user') // Njibo m3aha smia o email mn table users
+            ->with('user')
             ->get();
         return response()->json($infermiers);
     }
@@ -36,7 +36,7 @@ class InfermierController extends Controller
         ]);
 
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
+        $adminHopital = $user->adminHopital; 
 
         return DB::transaction(function () use ($request, $adminHopital) {
             // Créer l'User

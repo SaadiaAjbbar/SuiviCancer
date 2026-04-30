@@ -22,21 +22,18 @@ class SymptomeController extends Controller
             'toxicite_id' => 'required|exists:toxicites,id',
         ]);
 
-        // 2. Check de sécurité: Wach had la toxicité dyal had l'hopital?
         $user = Auth::user();
-        $adminHopital = $user->adminHopital; // Khass t'koun derti la relation f User.php
-
+        $adminHopital = $user->adminHopital;
         $toxicite = Toxicite::where('id', $request->toxicite_id)
             ->where('hopital_id', $adminHopital->hopital_id)
             ->first();
 
         if (!$toxicite) {
             return response()->json([
-                'message' => "Hadi machi toxicité dyal l'hôpital dyalkom!"
+                'message' => "cette toxicite nexeste pas dans votre hopital"
             ], 403);
         }
 
-        // 3. Création dyal Symptôme
         $symptome = Symptome::create([
             'nom' => $request->nom,
             'description' => $request->description,
@@ -54,7 +51,6 @@ class SymptomeController extends Controller
     {
         $adminHopital = Auth::user()->adminHopital;
 
-        // Jbed l'symptôme o t'akked men l'appartenance via la toxicité
         $symptome = Symptome::whereHas('toxicite', function ($query) use ($adminHopital) {
             $query->where('hopital_id', $adminHopital->hopital_id);
         })->find($id);
@@ -128,7 +124,6 @@ class SymptomeController extends Controller
             return response()->json(['message' => 'Accès non autorisé ou hôpital non trouvé'], 403);
         }
 
-        // Njibou ga3 l-symptomes li l-toxicité dyalhom taba3a l-had l-hopital
         $symptomes = Symptome::whereHas('toxicite', function ($query) use ($hopital_id) {
             $query->where('hopital_id', $hopital_id);
         })->with('toxicite')->get();

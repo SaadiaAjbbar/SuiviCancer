@@ -14,14 +14,13 @@ import DashboardPatient from '@/views/DashboardPatient.vue'
 
 
 const router = createRouter({
-  // createWebHistory permet d'avoir des URLs propres comme /login au lieu de /#/login
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
 
     {
       path: '/login',
       name: 'login',
-      component: Login, // C'est ici qu'on lie l'URL au composant
+      component: Login, 
     },
     {
       path: '/creer-hopital',

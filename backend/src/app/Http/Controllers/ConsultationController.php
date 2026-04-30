@@ -172,8 +172,6 @@ class ConsultationController extends Controller
             return response()->json(['message' => 'Profil patient non trouvé'], 404);
         }
 
-        // On récupère les consultations avec les symptômes, toxicités
-        // ET l'état général (qui contient les décisions : traitement, rdv, conseil)
         $consultations = Consultation::where('patient_id', $patient->id)
             ->with([
                 'medecin.user',

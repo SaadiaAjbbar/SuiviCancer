@@ -21,7 +21,6 @@ class AdminController extends Controller
             'hopital_id' => 'required|exists:hopitals,id|unique:admin_hopitals,hopital_id',
         ]);
 
-        // 1. Créer l'User awel 7aja
         $user = User::create([
             'nom' => $request->nom,
             'prenom' => $request->prenom,
@@ -30,7 +29,6 @@ class AdminController extends Controller
             'role' => 'ADMINHOPITAL',
         ]);
 
-        // 2. Créer l'entrée f'la table AdminHopital (L'affectation)
         AdminHopital::create([
             'user_id' => $user->id,
             'hopital_id' => $request->hopital_id
@@ -39,14 +37,13 @@ class AdminController extends Controller
         return response()->json(['message' => 'Admin Hôpital créé et lié avec succès'], 201);
     }
 
-    // f App\Http\Controllers\AuthController.php (aw ay controller dyal l-authentification)
     public function logout(Request $request)
     {
-        // Kan-ms7ou l-token li khdam bih l-user daba
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Déconnecté avec succès'
         ]);
     }
+
 }

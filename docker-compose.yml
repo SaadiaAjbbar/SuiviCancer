@@ -13,6 +13,7 @@ services:
       - postgres
     networks:
     - app-network
+  
   vue:
     build:
       context: ./frontend

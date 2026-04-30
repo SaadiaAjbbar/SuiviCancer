@@ -46,7 +46,6 @@ class PatientController extends Controller
             return response()->json(['message' => "Accès refusé. Profil pro introuvable."], 403);
         }
 
-        // Vérification: Le médecin appartient-il au même hôpital ?
         $medecin = Medecin::where('id', $request->medecin_id)
             ->where('hopital_id', $proInfo->hopital_id)
             ->first();
@@ -62,7 +61,7 @@ class PatientController extends Controller
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'email' => $request->email,
-                'mot_de_passe' => Hash::make($request->password), 
+                'mot_de_passe' => Hash::make($request->password),
                 'role' => 'PATIENT',
             ]);
 
@@ -91,7 +90,6 @@ class PatientController extends Controller
             return response()->json(['message' => 'Profil non autorisé'], 403);
         }
 
-        // On liste tous les patients de l'hôpital du pro connecté
         $patients = Patient::where('hopital_id', $proInfo->hopital_id)
             ->with(['user', 'medecin.user'])
             ->get();
@@ -189,4 +187,5 @@ class PatientController extends Controller
 
         return response()->json(['message' => 'Patient supprimé avec succès']);
     }
+
 }

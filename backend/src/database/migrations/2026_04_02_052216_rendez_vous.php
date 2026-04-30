@@ -12,10 +12,10 @@ return new class extends Migration
 
         Schema::create('rendez_vous', function (Blueprint $table) {
             $table->id();
-            $table->dateTime('date'); // Men l-ahsan dateTime bach t-7eddi l-sa3a
+            $table->dateTime('date');
             $table->string('status')->default('En attente');
             $table->foreignId('etat_general_id')->constrained()->onDelete('cascade');
-            $table->foreignId('patient_id')->constrained()->onDelete('cascade'); // Zidi hada
+            $table->foreignId('patient_id')->constrained()->onDelete('cascade'); 
             $table->timestamps();
         });
     }

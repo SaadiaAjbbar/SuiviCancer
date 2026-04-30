@@ -40,7 +40,6 @@ class User extends Authenticatable
     }
     public function adminHopital()
     {
-        // Relation 1:1 avec la table de liaison
         return $this->hasOne(AdminHopital::class, 'user_id');
     }
 
@@ -56,7 +55,6 @@ class User extends Authenticatable
 
     public function medecin()
     {
-        // HasOne hit kol user 3ndo profil medecin wa7ed
         return $this->hasOne(Medecin::class, 'user_id');
     }
 }

@@ -33,8 +33,4 @@ class Patient extends Model
     public function rendez_vous() {
         return $this->hasMany(RendezVous::class);
     }
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
 }

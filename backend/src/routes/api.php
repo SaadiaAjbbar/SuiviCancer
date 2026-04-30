@@ -28,8 +28,8 @@ Route::middleware(['auth:sanctum', 'role:ADMINGLOBAL'])->group(function () {
     Route::post('/hopitaux', [HopitalController::class, 'store']);
     Route::put('/hopitaux/{id}', [HopitalController::class, 'update']);
     Route::delete('/hopitaux/{id}', [HopitalController::class, 'destroy']);
-    Route::get('/hopitaux', [HopitalController::class, 'index']); 
-    Route::post('/admins-hopital', [AdminController::class, 'createAdminHopital']); // Création et Affectation de l'Admin Hopital
+    Route::get('/hopitaux', [HopitalController::class, 'index']);
+    Route::post('/admins-hopital', [AdminController::class, 'createAdminHopital']);
 
 });
 
@@ -47,16 +47,14 @@ Route::middleware(['auth:sanctum', 'role:ADMINHOPITAL'])->group(function () {
     Route::put('/symptomes/{id}', [SymptomeController::class, 'update']);
     Route::delete('/symptomes/{id}', [SymptomeController::class, 'destroy']);
 
-    // CRUD Infermiers
+
 
     Route::apiResource('infermiers', InfermierController::class);
 
-    //crud medecins
     Route::apiResource('medecins', MedecinController::class);
 });
 
 Route::middleware(['auth:sanctum', 'role:INFIRMIERE'])->group(function () {
-    // Option plus simple si apiResource te pose des soucis avec le nom du paramètre
     Route::get('infirmiers/patients', [PatientController::class, 'index']);
     Route::post('infirmiers/patients', [PatientController::class, 'store']);
     Route::get('infirmiers/patients/{id}', [PatientController::class, 'show']);
@@ -117,9 +115,9 @@ Route::middleware(['auth:sanctum', 'role:MEDECIN'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
-    // Bach i-chouf l-as'ila
-    Route::get('patient/my-questions', [QuestionController::class, 'afficherQuestionsPatient']);
-    // Bach i-jawb
+
+    //Route::get('patient/my-questions', [QuestionController::class, 'afficherQuestionsPatient']);
+
     Route::post('patient/submit-responses', [ReponseController::class, 'storeReponses']);
     Route::get('patient/my-questions', [ReponseController::class, 'getMyQuestions']);
     Route::get('patient/my-history', [ReponseController::class, 'getPatientHistory']);

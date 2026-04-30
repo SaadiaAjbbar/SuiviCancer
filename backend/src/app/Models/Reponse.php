@@ -24,11 +24,7 @@ class Reponse extends Model
     {
         return $this->hasMany(reponse_questionnaires::class, 'reponses_id');
     }
-    public function question()
-    {
-        return $this->belongsToMany(Question::class, 'reponse_questionnaires', 'reponses_id', 'questions_id')
-            ->withPivot('reponse');
-    }
+
 
 
 }

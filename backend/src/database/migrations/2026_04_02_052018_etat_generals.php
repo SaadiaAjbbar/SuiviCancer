@@ -12,7 +12,6 @@ return new class extends Migration
         Schema::create('etat_generals', function (Blueprint $table) {
             $table->id();
             $table->text('description');
-            // Source flexible : soit consultation, soit questionnaire
             $table->foreignId('consultation_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('reponse_id')->nullable()->constrained()->onDelete('cascade');
             $table->timestamps();

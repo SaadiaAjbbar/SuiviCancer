@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('traitements', function (Blueprint $table) {
-            // Zidnaha nullable hit t-qdri t-7tajih i-koun khawi f l-owl ila kan l-code qdim
             $table->foreignId('patient_id')->nullable()->constrained()->onDelete('cascade');
         });
     }
